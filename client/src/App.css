@@ -54,6 +54,11 @@
   gap: 14px;
 }
 
+.lobby-how-to-play {
+  width: 100%;
+  margin-top: 12px;
+}
+
 .lobby-form label {
   display: flex;
   flex-direction: column;

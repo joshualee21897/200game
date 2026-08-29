@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import InstructionsOverlay from './InstructionsOverlay';
 
 export default function Lobby({ onCreate, onJoin, error, busy }) {
   const [name, setName] = useState('');
   const [roomCode, setRoomCode] = useState('');
   const [mode, setMode] = useState('join');
+  const [showInstructions, setShowInstructions] = useState(false);
 
   function submit(e) {
     e.preventDefault();
@@ -50,6 +52,12 @@ export default function Lobby({ onCreate, onJoin, error, busy }) {
           {mode === 'create' ? 'Create Room' : 'Join Room'}
         </button>
       </form>
+
+      <button type="button" className="secondary lobby-how-to-play" onClick={() => setShowInstructions(true)}>
+        How to Play
+      </button>
+
+      {showInstructions && <InstructionsOverlay onClose={() => setShowInstructions(false)} />}
     </div>
   );
 }
