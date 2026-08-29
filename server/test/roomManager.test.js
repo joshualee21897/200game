@@ -17,11 +17,11 @@ test('rejects joining with a name already active', () => {
   assert.throws(() => rm.joinRoom(room.code, 'Alice'));
 });
 
-test('rejects joining a full room (max 5)', () => {
+test('rejects joining a full room (max 10)', () => {
   const rm = new RoomManager();
   const { room } = rm.createRoom('P1');
-  for (const n of ['P2', 'P3', 'P4', 'P5']) rm.joinRoom(room.code, n);
-  assert.throws(() => rm.joinRoom(room.code, 'P6'));
+  for (const n of ['P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10']) rm.joinRoom(room.code, n);
+  assert.throws(() => rm.joinRoom(room.code, 'P11'));
 });
 
 test('only host can start; requires at least 2 players', () => {

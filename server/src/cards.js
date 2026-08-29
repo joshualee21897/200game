@@ -8,15 +8,24 @@ function rankValue(rank) {
   return Number(rank);
 }
 
-export function createDeck() {
+export function createDeck(deckCount = 1) {
   const cards = [];
-  for (const suit of SUITS) {
-    for (const rank of RANK_ORDER) {
-      cards.push({ id: `${rank}${suit}`, rank, suit, value: rankValue(rank) });
+  let jokerCounter = 0;
+  for (let d = 0; d < deckCount; d++) {
+    for (const suit of SUITS) {
+      for (const rank of RANK_ORDER) {
+        // Card ids must stay unique even when multiple decks are combined
+        // (6-10 player games) - only suffix them when there's more than one
+        // deck, so single-deck ids (and everything keyed off them, like
+        // existing tests/fixtures) are unchanged.
+        const id = deckCount > 1 ? `${rank}${suit}-${d + 1}` : `${rank}${suit}`;
+        cards.push({ id, rank, suit, value: rankValue(rank) });
+      }
     }
-  }
-  for (let i = 1; i <= 4; i++) {
-    cards.push({ id: `JOKER${i}`, rank: 'JOKER', suit: null, value: 0 });
+    for (let i = 0; i < 4; i++) {
+      jokerCounter += 1;
+      cards.push({ id: `JOKER${jokerCounter}`, rank: 'JOKER', suit: null, value: 0 });
+    }
   }
   return cards;
 }

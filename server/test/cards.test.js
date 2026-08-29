@@ -8,6 +8,17 @@ test('deck has 56 unique cards', () => {
   assert.equal(new Set(deck.map((c) => c.id)).size, 56);
 });
 
+test('two decks combine into 112 unique cards for 6-10 player games', () => {
+  const deck = createDeck(2);
+  assert.equal(deck.length, 112);
+  assert.equal(new Set(deck.map((c) => c.id)).size, 112);
+  // Values/ranks are unaffected by the extra deck - only ids differ.
+  const aces = deck.filter((c) => c.rank === 'A');
+  assert.equal(aces.length, 8); // 4 suits x 2 decks
+  assert.equal(new Set(aces.map((c) => c.value)).size, 1);
+  assert.equal(deck.filter((c) => c.rank === 'JOKER').length, 8);
+});
+
 test('card values match brief', () => {
   const deck = createDeck();
   const byId = Object.fromEntries(deck.map((c) => [c.id, c]));

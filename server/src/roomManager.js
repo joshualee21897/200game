@@ -3,7 +3,7 @@ import { Game } from './gameEngine.js';
 
 const ROOM_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no ambiguous 0/O/1/I
 const MIN_PLAYERS = 2;
-const MAX_PLAYERS = 5;
+const MAX_PLAYERS = 10;
 const RECONNECT_GRACE_MS = 2 * 60 * 1000;
 
 function genRoomCode(existingCodes) {

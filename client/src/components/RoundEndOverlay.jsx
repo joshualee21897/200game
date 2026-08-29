@@ -12,15 +12,13 @@ function listNames(names) {
 function outcomeText(result, room) {
   const callerName = nameFor(room, result.callerId);
   if (result.outcome === 'win') {
+    if (result.tiedWithCaller?.length > 0) {
+      const tierNames = result.tiedWithCaller.map((id) => nameFor(room, id));
+      return `${callerName} called and won — tied with ${listNames(tierNames)}, but the call stands!`;
+    }
     return `${callerName} won the round!`;
   }
-  if (result.outcome === 'wrong_call') {
-    return `${callerName} called wrongly — 30 point penalty!`;
-  }
-  const tierNames = Object.entries(result.deltas)
-    .filter(([id, delta]) => id !== result.callerId && delta === 0)
-    .map(([id]) => nameFor(room, id));
-  return `${callerName} called, but ${listNames(tierNames)} tied them — no bonus for the caller.`;
+  return `${callerName} called wrongly — 30 point penalty!`;
 }
 
 export default function RoundEndOverlay({ game, room, playerId, onNextRound }) {

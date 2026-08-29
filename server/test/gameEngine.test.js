@@ -29,6 +29,30 @@ test('startRound deals 5 cards each and sets up piles', () => {
   assert.equal(game.turnDeadline > Date.now(), true);
 });
 
+test('startRound uses a single deck for up to 5 players', () => {
+  const game = new Game(makePlayers(5), { rng: makeRng(1) });
+  game.startRound();
+  assert.equal(game.drawPile.length + game.discardPile.length + game.players.length * 5, 56);
+});
+
+test('startRound uses two combined decks once there are 6+ players', () => {
+  const game = new Game(makePlayers(6), { rng: makeRng(1) });
+  game.startRound();
+  const total = game.drawPile.length + game.discardPile.length + game.players.reduce((sum, p) => sum + p.hand.length, 0);
+  assert.equal(total, 112);
+  assert.equal(new Set([...game.drawPile, ...game.discardPile, ...game.players.flatMap((p) => p.hand)].map((c) => c.id)).size, 112);
+});
+
+test('supports up to 10 players', () => {
+  const game = new Game(makePlayers(10), { rng: makeRng(1) });
+  game.startRound();
+  for (const p of game.players) assert.equal(p.hand.length, 5);
+});
+
+test('rejects more than 10 players', () => {
+  assert.throws(() => new Game(makePlayers(11), { rng: makeRng(1) }));
+});
+
 test('discard then draw advances turn to next player', () => {
   const game = new Game(makePlayers(3), { rng: makeRng(2) });
   game.startRound();
@@ -96,7 +120,7 @@ test('resolveCall: caller strictly lowest wins', () => {
   assert.equal(result.nextStarterId, 'a');
 });
 
-test('resolveCall: tie only rewards the tying player, not the caller', () => {
+test('resolveCall: a tie for lowest still counts as a win for the caller', () => {
   const byId = cardsById();
   const players = [
     { id: 'a', hand: [byId['2S']] }, // caller, value 2
@@ -104,10 +128,12 @@ test('resolveCall: tie only rewards the tying player, not the caller', () => {
     { id: 'c', hand: [byId['9S']] }, // value 9
   ];
   const result = resolveCall(players, 'a');
-  assert.equal(result.outcome, 'tie');
-  assert.equal(result.deltas.a, 2);
-  assert.equal(result.deltas.b, 0);
+  assert.equal(result.outcome, 'win');
+  assert.equal(result.deltas.a, 0);
+  assert.equal(result.deltas.b, 2);
   assert.equal(result.deltas.c, 9);
+  assert.equal(result.nextStarterId, 'a');
+  assert.deepEqual(result.tiedWithCaller, ['b']);
 });
 
 test('resolveCall: someone strictly lower makes it a wrong call', () => {

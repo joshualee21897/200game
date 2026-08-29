@@ -2,8 +2,12 @@ import { createDeck, shuffle, handValue, isValidDiscard } from './cards.js';
 
 export const TURN_SECONDS = 30;
 const MIN_PLAYERS = 2;
-const MAX_PLAYERS = 5;
+const MAX_PLAYERS = 10;
 const HAND_SIZE = 5;
+// 6-10 players burn through a single 56-card deck too fast for the
+// draw/discard cycle to feel right, so those games are played with two
+// decks shuffled together (112 cards) instead.
+const DOUBLE_DECK_MIN_PLAYERS = 6;
 
 function milestoneRebate(total) {
   if (total === 50 || total === 100 || total === 150 || total === 200) {
@@ -14,41 +18,39 @@ function milestoneRebate(total) {
 
 /**
  * Resolves a call per the brief:
- *  - caller strictly lowest -> caller adds 0, everyone else adds own value.
- *  - someone else ties the caller's value -> only the tying player(s) add 0;
- *    the caller (having failed to be *strictly* lowest) adds their own value
- *    like a normal non-winner.
+ *  - caller strictly lowest, or tied with someone else for lowest -> caller
+ *    made a good call either way, adds 0; everyone else adds their own
+ *    value (including anyone who tied the caller - the tie goes to the
+ *    caller since they're the one who called). The caller keeps the deal
+ *    for the next round in both cases.
  *  - someone strictly beats the caller -> wrong call: caller adds a flat 30
  *    penalty only (not their hand value on top of it), everyone else adds
- *    their own value as normal.
+ *    their own value as normal; whoever was strictly lowest opens next.
  */
 export function resolveCall(players, callerId) {
   const values = players.map((p) => ({ id: p.id, value: handValue(p.hand) }));
   const callerValue = values.find((v) => v.id === callerId).value;
   const others = values.filter((v) => v.id !== callerId);
   const someoneStrictlyLower = others.some((v) => v.value < callerValue);
-  const tiers = others.filter((v) => v.value === callerValue);
+  const tiedWithCaller = others.filter((v) => v.value === callerValue).map((v) => v.id);
 
   const deltas = {};
   let outcome;
+  let nextStarterId;
   if (someoneStrictlyLower) {
     outcome = 'wrong_call';
     deltas[callerId] = 30;
     for (const v of others) deltas[v.id] = v.value;
-  } else if (tiers.length > 0) {
-    outcome = 'tie';
-    deltas[callerId] = callerValue;
-    for (const v of others) deltas[v.id] = v.value === callerValue ? 0 : v.value;
+    const minValue = Math.min(...others.map((v) => v.value));
+    nextStarterId = others.find((v) => v.value === minValue).id;
   } else {
     outcome = 'win';
     deltas[callerId] = 0;
     for (const v of others) deltas[v.id] = v.value;
+    nextStarterId = callerId;
   }
 
-  const minValue = Math.min(...values.map((v) => v.value));
-  const nextStarterId = values.find((v) => v.value === minValue).id;
-
-  return { outcome, values, deltas, nextStarterId };
+  return { outcome, values, deltas, nextStarterId, tiedWithCaller };
 }
 
 export const RPS_MOVES = ['rock', 'paper', 'scissors'];
@@ -149,7 +151,8 @@ export class Game {
 
   startRound(startingPlayerId) {
     if (this.finalResult) throw new Error('Game already ended');
-    const deck = shuffle(createDeck(), this.rng);
+    const deckCount = this.players.length >= DOUBLE_DECK_MIN_PLAYERS ? 2 : 1;
+    const deck = shuffle(createDeck(deckCount), this.rng);
     for (const player of this.players) {
       player.hand = deck.splice(0, HAND_SIZE);
     }

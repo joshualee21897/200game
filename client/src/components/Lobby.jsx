@@ -17,7 +17,7 @@ export default function Lobby({ onCreate, onJoin, error, busy }) {
   return (
     <div className="panel lobby-panel">
       <h1>200</h1>
-      <p className="subtitle">A card game for 2-5 players. Keep your hand low, call when confident.</p>
+      <p className="subtitle">A card game for 2-10 players. Keep your hand low, call when confident.</p>
 
       <div className="mode-toggle">
         <button type="button" className={mode === 'join' ? 'active' : ''} onClick={() => setMode('join')}>

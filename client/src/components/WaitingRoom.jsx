@@ -4,7 +4,7 @@ import InstructionsOverlay from './InstructionsOverlay';
 export default function WaitingRoom({ room, playerId, onStart, error, busy }) {
   const [showInstructions, setShowInstructions] = useState(false);
   const isHost = room.hostId === playerId;
-  const canStart = room.seats.length >= 2 && room.seats.length <= 5;
+  const canStart = room.seats.length >= 2 && room.seats.length <= 10;
 
   return (
     <div className="panel">
