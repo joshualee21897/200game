@@ -51,6 +51,29 @@ export function resolveCall(players, callerId) {
   return { outcome, values, deltas, nextStarterId };
 }
 
+export const RPS_MOVES = ['rock', 'paper', 'scissors'];
+const RPS_BEATS = { rock: 'scissors', scissors: 'paper', paper: 'rock' };
+
+/**
+ * Resolves one simultaneous rock-paper-scissors sub-round among `active`
+ * player ids given their `choices` (id -> move). Standard multi-player
+ * convention: if everyone threw the same move, or all three moves are in
+ * play, it's a wash and everyone re-throws. Otherwise exactly two distinct
+ * moves are in play - whichever beats the other survives; players who threw
+ * the losing move are eliminated. Repeated until one player remains.
+ */
+export function resolveRpsRound(active, choices) {
+  const distinctMoves = [...new Set(active.map((id) => choices[id]))];
+  if (distinctMoves.length !== 2) {
+    return { tie: true, winningMove: null, winners: active, eliminated: [] };
+  }
+  const [a, b] = distinctMoves;
+  const winningMove = RPS_BEATS[a] === b ? a : b;
+  const winners = active.filter((id) => choices[id] === winningMove);
+  const eliminated = active.filter((id) => choices[id] !== winningMove);
+  return { tie: false, winningMove, winners, eliminated };
+}
+
 export class Game {
   constructor(players, { rng = Math.random } = {}) {
     if (players.length < MIN_PLAYERS || players.length > MAX_PLAYERS) {
@@ -73,8 +96,17 @@ export class Game {
     // of the pile, but not choosable by that same player (see draw()).
     this.pickableGroup = [];
     this.pendingGroup = null;
-    this.turnIndex = Math.floor(this.rng() * this.players.length);
-    this.phase = 'waiting';
+    this.turnIndex = 0;
+    // A brand-new game always opens with a rock-paper-scissors throw-off to
+    // decide who starts round 1; every round after that is decided by
+    // resolveCall's nextStarterId instead (see startNextRound / call()).
+    this.phase = 'rps';
+    this.rps = {
+      active: this.players.map((p) => p.id),
+      choices: {},
+      lastRound: null,
+      winnerId: null,
+    };
     this.roundResult = null;
     this.finalResult = null;
     this.turnDeadline = null;
@@ -82,6 +114,31 @@ export class Game {
 
   get currentPlayer() {
     return this.players[this.turnIndex];
+  }
+
+  submitRpsChoice(playerId, move) {
+    if (this.phase !== 'rps') throw new Error('Not currently deciding who starts');
+    if (!this.rps.active.includes(playerId)) throw new Error('You are not part of this throw-off');
+    if (!RPS_MOVES.includes(move)) throw new Error('Invalid move');
+    if (this.rps.choices[playerId]) throw new Error('Already chosen this round');
+
+    this.rps.choices[playerId] = move;
+    if (Object.keys(this.rps.choices).length === this.rps.active.length) {
+      this.resolveRpsSubRound();
+    }
+    return this.getState();
+  }
+
+  resolveRpsSubRound() {
+    const choices = { ...this.rps.choices };
+    const result = resolveRpsRound(this.rps.active, choices);
+    this.rps.lastRound = { choices, eliminated: result.eliminated, tie: result.tie };
+    this.rps.active = result.winners;
+    this.rps.choices = {};
+    if (result.winners.length === 1) {
+      this.rps.winnerId = result.winners[0];
+      this.startRound(result.winners[0]);
+    }
   }
 
   playerById(id) {
@@ -128,9 +185,9 @@ export class Game {
       return card;
     });
     if (!isValidDiscard(cards)) throw new Error('Invalid discard');
-    if (cards.length >= player.hand.length) {
-      throw new Error('Must retain at least 1 card in hand');
-    }
+    // A discard may empty the hand entirely - the mandatory draw that
+    // immediately follows (same turn, before anyone else can act) always
+    // brings it back to at least 1 card.
     const idSet = new Set(cardIds);
     player.hand = player.hand.filter((c) => !idSet.has(c.id));
     this.discardPile.push(...cards);
@@ -250,13 +307,7 @@ export class Game {
   handleTimeout() {
     if (this.phase === 'discard') {
       const player = this.currentPlayer;
-      if (player.hand.length <= 1) {
-        // Only card left - can't legally discard it (must retain 1), so skip to draw.
-        this.phase = 'draw';
-      } else {
-        const card = player.hand[0];
-        this.discard(player.id, [card.id]);
-      }
+      this.discard(player.id, [player.hand[0].id]);
       this.autoDraw();
     } else if (this.phase === 'draw') {
       this.autoDraw();
@@ -273,12 +324,16 @@ export class Game {
     return {
       roundNumber: this.roundNumber,
       phase: this.phase,
-      currentPlayerId: this.players[this.turnIndex]?.id ?? null,
+      currentPlayerId: this.phase === 'rps' ? null : this.players[this.turnIndex]?.id ?? null,
       turnDeadline: this.turnDeadline,
       drawPileCount: this.drawPile.length,
       discardPile: this.discardPile,
       pickableGroup: this.pickableGroup,
       pendingGroup: this.pendingGroup || [],
+      rps:
+        this.phase === 'rps'
+          ? { active: this.rps.active, submitted: Object.keys(this.rps.choices), lastRound: this.rps.lastRound }
+          : null,
       players: this.players.map((p) => ({
         id: p.id,
         name: p.name,

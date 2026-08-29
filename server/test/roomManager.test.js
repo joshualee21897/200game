@@ -32,7 +32,7 @@ test('only host can start; requires at least 2 players', () => {
   assert.throws(() => rm.startGame(room.code, bobId)); // not host
   const started = rm.startGame(room.code, hostId, { rng: () => 0.42 });
   assert.equal(started.status, 'in_game');
-  assert.equal(started.game.phase, 'discard');
+  assert.equal(started.game.phase, 'rps'); // throw-off decides who opens round 1
 });
 
 test('reconnect re-attaches to a disconnected seat by name', () => {

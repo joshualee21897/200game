@@ -38,11 +38,11 @@ This builds the React client (`vite build`) and then runs only the Express serve
 
 1. One player creates a room and shares the 5-letter room code.
 2. 2-5 players join by typing a display name and the room code (no accounts).
-3. The host starts the game once at least 2 players are seated.
-4. Each turn: discard a single card or a valid meld (pair/triple/quad of one rank, or a same-suit run of 3+ consecutive cards — Ace is low, Jokers can't join a meld), then draw one card from the draw pile or the top of the discard pile. You always keep at least 1 card.
+3. The host starts the game once at least 2 players are seated. Everyone throws rock-paper-scissors to decide who opens round 1 (ties and 3+-way splits just re-throw among whoever's still tied for the win).
+4. Each turn: discard a single card or a valid meld (pair/triple/quad of one rank, or a same-suit run of 3+ consecutive cards — Ace is low, Jokers can't join a meld) — including your entire hand if it's all one valid meld, since the draw right after always brings you back to at least 1 card — then draw one card from the draw pile or the top of the discard pile.
 5. If your hand value is 5 or less, you may call instead of discarding. All hands are revealed and scored per the round-resolution rules below.
-6. Running totals persist across rounds; landing exactly on 50/100/150/200 rebates 50 points. Going over 200 (without landing exactly on it) ends the game for that player.
-7. Each turn has a 30-second clock; if it expires the server auto-plays (discards a card and/or draws) so the game never stalls.
+6. Running totals persist across rounds; landing exactly on 50/100/150/200 rebates 50 points. Going over 200 (without landing exactly on it) ends the game for that player. Whoever had the lowest hand value at the last reveal opens the next round (see below).
+7. Each turn has a 30-second clock; if it expires the server auto-plays (discards a card and/or draws) so the game never stalls. The rock-paper-scissors throw-off itself isn't timed.
 
 ### Reconnecting
 

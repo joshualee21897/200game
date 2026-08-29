@@ -75,7 +75,8 @@ export class RoomManager {
 
     room.game = new Game(room.seats.map((s) => ({ id: s.id, name: s.name })), options);
     room.status = 'in_game';
-    room.game.startRound();
+    // Game starts itself in a 'rps' phase (throw-off to decide who opens
+    // round 1) and calls startRound() once that resolves - see gameEngine.js.
     return room;
   }
 

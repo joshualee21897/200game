@@ -3,14 +3,19 @@ import Card from './Card';
 import Timer from './Timer';
 import RoundEndOverlay from './RoundEndOverlay';
 import GameEndOverlay from './GameEndOverlay';
+import RpsPanel from './RpsPanel';
 import { handValue } from '../gameRules';
 
-export default function Table({ room, game, hand, playerId, onDiscard, onDraw, onCall, onNextRound, error }) {
+export default function Table({ room, game, hand, playerId, onDiscard, onDraw, onCall, onNextRound, onRpsChoice, error }) {
   const [selected, setSelected] = useState(() => new Set());
 
   useEffect(() => {
     setSelected(new Set());
   }, [game.phase, game.roundNumber]);
+
+  if (game.phase === 'rps') {
+    return <RpsPanel room={room} game={game} playerId={playerId} onChoose={onRpsChoice} />;
+  }
 
   const isMyTurn = game.currentPlayerId === playerId;
   const myValue = handValue(hand);

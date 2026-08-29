@@ -53,6 +53,7 @@ function App() {
   const handleDiscard = (cardIds) => runAction('game:discard', { cardIds });
   const handleDraw = (source, cardId) => runAction('game:draw', { source, cardId });
   const handleCall = () => runAction('game:call', {});
+  const handleRpsChoice = (move) => runAction('game:rpsChoice', { move });
 
   if (!connected) {
     return (
@@ -91,6 +92,7 @@ function App() {
         onDraw={handleDraw}
         onCall={handleCall}
         onNextRound={handleNextRound}
+        onRpsChoice={handleRpsChoice}
         error={error}
       />
     </div>

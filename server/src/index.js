@@ -144,6 +144,19 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('game:rpsChoice', ({ move } = {}, cb) => {
+    try {
+      const room = roomManager.getRoom(socket.data.roomCode);
+      if (!room || !room.game) throw new Error('No active game');
+      room.game.submitRpsChoice(socket.data.playerId, move);
+      cb?.({ ok: true });
+      broadcastState(room);
+      scheduleTurnTimer(room); // no-ops unless the throw-off just resolved into round 1
+    } catch (err) {
+      cb?.({ ok: false, error: err.message });
+    }
+  });
+
   socket.on('game:discard', ({ cardIds } = {}, cb) => {
     try {
       const room = roomManager.getRoom(socket.data.roomCode);

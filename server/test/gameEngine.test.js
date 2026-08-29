@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Game, resolveCall, TURN_SECONDS } from '../src/gameEngine.js';
+import { Game, resolveCall, resolveRpsRound, TURN_SECONDS } from '../src/gameEngine.js';
 import { createDeck } from '../src/cards.js';
 
 function makeRng(seed) {
@@ -49,12 +49,18 @@ test('rejects discard when not your turn', () => {
   assert.throws(() => game.discard(other.id, [other.hand[0].id]));
 });
 
-test('cannot discard entire hand (must retain 1 card)', () => {
+test('can discard the entire hand as a valid meld (draw right after refills it)', () => {
+  const byId = cardsById();
   const game = new Game(makePlayers(2), { rng: makeRng(4) });
   game.startRound();
   const player = game.currentPlayer;
-  const ids = player.hand.map((c) => c.id);
-  assert.throws(() => game.discard(player.id, ids));
+  player.hand = [byId['7S'], byId['7H'], byId['7D'], byId['7C']];
+  const state = game.discard(player.id, ['7S', '7H', '7D', '7C']);
+  assert.equal(player.hand.length, 0);
+  assert.equal(state.phase, 'draw');
+  const after = game.draw(player.id, 'pile');
+  assert.equal(player.hand.length, 1);
+  assert.equal(after.phase, 'discard');
 });
 
 test('rejects invalid meld discard', () => {
@@ -313,4 +319,106 @@ test('unclaimed meld cards become buried once the next turn discards', () => {
   // Only p2's discard is pickable now - the meld from p1's turn is buried.
   assert.deepEqual(game.pickableGroup.map((c) => c.id), [p2Thrown.id]);
   assert.throws(() => game.draw(p3.id, 'discard', '7S'));
+});
+
+// --- Rock-paper-scissors throw-off for round 1 ---
+
+test('resolveRpsRound: two players, distinct moves -> single winner', () => {
+  const result = resolveRpsRound(['a', 'b'], { a: 'rock', b: 'scissors' });
+  assert.equal(result.tie, false);
+  assert.equal(result.winningMove, 'rock');
+  assert.deepEqual(result.winners, ['a']);
+  assert.deepEqual(result.eliminated, ['b']);
+});
+
+test('resolveRpsRound: everyone throws the same move -> tie, nobody eliminated', () => {
+  const result = resolveRpsRound(['a', 'b', 'c'], { a: 'paper', b: 'paper', c: 'paper' });
+  assert.equal(result.tie, true);
+  assert.deepEqual(result.winners, ['a', 'b', 'c']);
+  assert.deepEqual(result.eliminated, []);
+});
+
+test('resolveRpsRound: all three moves present -> tie, everyone re-throws', () => {
+  const result = resolveRpsRound(['a', 'b', 'c'], { a: 'rock', b: 'paper', c: 'scissors' });
+  assert.equal(result.tie, true);
+  assert.deepEqual(result.winners, ['a', 'b', 'c']);
+});
+
+test('resolveRpsRound: 2-vs-1 split eliminates the minority losing move', () => {
+  const result = resolveRpsRound(['a', 'b', 'c'], { a: 'rock', b: 'rock', c: 'paper' });
+  assert.equal(result.tie, false);
+  assert.equal(result.winningMove, 'paper'); // paper beats rock
+  assert.deepEqual(result.winners, ['c']);
+  assert.deepEqual(result.eliminated.sort(), ['a', 'b']);
+});
+
+test('a fresh Game starts in rps phase with every player active', () => {
+  const game = new Game(makePlayers(3), { rng: makeRng(30) });
+  assert.equal(game.phase, 'rps');
+  assert.deepEqual(game.rps.active.sort(), game.players.map((p) => p.id).sort());
+  assert.equal(game.roundNumber, 0);
+});
+
+test('submitRpsChoice rejects invalid phase, non-participants, and bad moves', () => {
+  const game = new Game(makePlayers(2), { rng: makeRng(31) });
+  assert.throws(() => game.submitRpsChoice('not-a-player', 'rock'));
+  assert.throws(() => game.submitRpsChoice(game.players[0].id, 'lizard'));
+  game.submitRpsChoice(game.players[0].id, 'rock');
+  assert.throws(() => game.submitRpsChoice(game.players[0].id, 'paper')); // already chosen
+});
+
+test('two-player rps resolves immediately and deals round 1 to the winner', () => {
+  const game = new Game(makePlayers(2), { rng: makeRng(32) });
+  const [p1, p2] = game.players;
+  game.submitRpsChoice(p1.id, 'rock');
+  const state = game.submitRpsChoice(p2.id, 'scissors');
+  assert.equal(state.phase, 'discard');
+  assert.equal(state.roundNumber, 1);
+  assert.equal(state.currentPlayerId, p1.id); // rock beat scissors
+  assert.equal(p1.hand.length, 5); // round was actually dealt
+});
+
+test('rps tie makes everyone re-throw without eliminating anyone', () => {
+  const game = new Game(makePlayers(2), { rng: makeRng(33) });
+  const [p1, p2] = game.players;
+  game.submitRpsChoice(p1.id, 'rock');
+  const state = game.submitRpsChoice(p2.id, 'rock');
+  assert.equal(state.phase, 'rps');
+  assert.deepEqual(state.rps.active.sort(), [p1.id, p2.id].sort());
+  assert.deepEqual(state.rps.submitted, []); // choices cleared for the re-throw
+  assert.equal(state.rps.lastRound.tie, true);
+  // Both players can throw again immediately.
+  game.submitRpsChoice(p1.id, 'paper');
+  const state2 = game.submitRpsChoice(p2.id, 'scissors');
+  assert.equal(state2.phase, 'discard');
+  assert.equal(state2.currentPlayerId, p2.id); // scissors beat paper
+});
+
+test('three-player rps eliminates the minority before a final 1-on-1', () => {
+  const game = new Game(makePlayers(3), { rng: makeRng(34) });
+  const [p1, p2, p3] = game.players;
+  // Round 1: p1 & p2 throw rock, p3 throws paper -> p3 is the sole winner
+  // outright (2-vs-1 split resolves in one shot, no further throw needed).
+  game.submitRpsChoice(p1.id, 'rock');
+  game.submitRpsChoice(p2.id, 'rock');
+  const state = game.submitRpsChoice(p3.id, 'paper');
+  assert.equal(state.phase, 'discard');
+  assert.equal(state.currentPlayerId, p3.id);
+});
+
+test('three-player rps continues among survivors after elimination', () => {
+  const game = new Game(makePlayers(3), { rng: makeRng(35) });
+  const [p1, p2, p3] = game.players;
+  // p1 & p2 throw rock (survive), p3 throws scissors (eliminated - rock beats scissors).
+  game.submitRpsChoice(p1.id, 'rock');
+  game.submitRpsChoice(p2.id, 'rock');
+  const state = game.submitRpsChoice(p3.id, 'scissors');
+  assert.equal(state.phase, 'rps');
+  assert.deepEqual(state.rps.active.sort(), [p1.id, p2.id].sort());
+  assert.deepEqual(state.rps.lastRound.eliminated, [p3.id]);
+  // Final showdown between the two survivors.
+  game.submitRpsChoice(p1.id, 'paper');
+  const final = game.submitRpsChoice(p2.id, 'rock');
+  assert.equal(final.phase, 'discard');
+  assert.equal(final.currentPlayerId, p1.id); // paper beat rock
 });
