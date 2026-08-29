@@ -48,6 +48,8 @@ This builds the React client (`vite build`) and then runs only the Express serve
 
 Players are identified by their typed display name, not an account — there's no persistent login. If your connection drops mid-game, rejoin the same room with the **same name** (case-insensitive) to reclaim your seat and hand. A dropped seat is only freed automatically if the room is still in its lobby (pre-game) and the player doesn't return within a couple of minutes; once a game is underway, a seat is held indefinitely (the turn timer keeps the game moving in the meantime).
 
+A flaky connection (WiFi blip, phone locking, browser auto-reconnecting the socket) doesn't need any of that typed back in manually: the client remembers your name and room code in `localStorage` and silently re-joins as soon as the socket reconnects, before you'd even notice you dropped. That saved session is cleared once the game you were in actually ends, so a later visit starts at a clean lobby instead of trying to rejoin a finished match.
+
 ## Notable implementation decisions
 
 A few points in the brief were open to interpretation; here's what was implemented and why:
