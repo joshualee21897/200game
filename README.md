@@ -52,7 +52,7 @@ Players are identified by their typed display name, not an account — there's n
 
 A few points in the brief were open to interpretation; here's what was implemented and why:
 
-- **Call resolution — ties.** Per the brief: a caller who is strictly lowest wins (adds 0); if someone *ties* the caller's value, only the tying player adds 0 — the caller, having failed to be *strictly* lowest, adds their own hand value like a normal non-winner. If anyone is *strictly* lower, it's a wrong call (caller adds value + 30 penalty).
+- **Call resolution — ties and wrong calls.** A caller who is strictly lowest wins (adds 0); if someone *ties* the caller's value, only the tying player adds 0 — the caller, having failed to be *strictly* lowest, adds their own hand value like a normal non-winner. If anyone is *strictly* lower, it's a wrong call: the caller adds a flat 30-point penalty only (not their hand value on top of it).
 - **Next round's starter.** The brief says "the winner of each round starts the next round," but doesn't say who starts after a tie or a wrong call (no one "wins" in those cases). Implemented as: whoever had the lowest hand value at reveal starts the next round, which naturally covers all three outcomes.
 - **Runs and Ace ordering.** Ace is always low (matching its 1-point value), so `A-2-3` is a valid run but `Q-K-A` is not.
 - **Turn timer scope.** The 30-second clock covers a full turn (discard *and* draw), not each action separately — it resets only when the turn passes to the next player.

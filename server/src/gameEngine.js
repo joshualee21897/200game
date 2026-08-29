@@ -18,8 +18,9 @@ function milestoneRebate(total) {
  *  - someone else ties the caller's value -> only the tying player(s) add 0;
  *    the caller (having failed to be *strictly* lowest) adds their own value
  *    like a normal non-winner.
- *  - someone strictly beats the caller -> wrong call: caller adds value+30,
- *    everyone else adds their own value as normal.
+ *  - someone strictly beats the caller -> wrong call: caller adds a flat 30
+ *    penalty only (not their hand value on top of it), everyone else adds
+ *    their own value as normal.
  */
 export function resolveCall(players, callerId) {
   const values = players.map((p) => ({ id: p.id, value: handValue(p.hand) }));
@@ -32,7 +33,7 @@ export function resolveCall(players, callerId) {
   let outcome;
   if (someoneStrictlyLower) {
     outcome = 'wrong_call';
-    deltas[callerId] = callerValue + 30;
+    deltas[callerId] = 30;
     for (const v of others) deltas[v.id] = v.value;
   } else if (tiers.length > 0) {
     outcome = 'tie';

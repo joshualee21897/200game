@@ -113,7 +113,7 @@ test('resolveCall: someone strictly lower makes it a wrong call', () => {
   ];
   const result = resolveCall(players, 'a');
   assert.equal(result.outcome, 'wrong_call');
-  assert.equal(result.deltas.a, 4 + 30);
+  assert.equal(result.deltas.a, 30); // flat 30 penalty, not hand value + 30
   assert.equal(result.deltas.b, 1);
   assert.equal(result.deltas.c, 9);
   assert.equal(result.nextStarterId, 'b');
