@@ -4,17 +4,27 @@ import Timer from './Timer';
 import RoundEndOverlay from './RoundEndOverlay';
 import GameEndOverlay from './GameEndOverlay';
 import RpsPanel from './RpsPanel';
+import InstructionsOverlay from './InstructionsOverlay';
 import { handValue } from '../gameRules';
 
 export default function Table({ room, game, hand, playerId, onDiscard, onDraw, onCall, onNextRound, onRpsChoice, error }) {
   const [selected, setSelected] = useState(() => new Set());
+  const [showInstructions, setShowInstructions] = useState(false);
 
   useEffect(() => {
     setSelected(new Set());
   }, [game.phase, game.roundNumber]);
 
   if (game.phase === 'rps') {
-    return <RpsPanel room={room} game={game} playerId={playerId} onChoose={onRpsChoice} />;
+    return (
+      <>
+        <RpsPanel room={room} game={game} playerId={playerId} onChoose={onRpsChoice} />
+        <button type="button" className="icon-button how-to-play-fab" onClick={() => setShowInstructions(true)} title="How to Play">
+          ?
+        </button>
+        {showInstructions && <InstructionsOverlay onClose={() => setShowInstructions(false)} />}
+      </>
+    );
   }
 
   const isMyTurn = game.currentPlayerId === playerId;
@@ -69,7 +79,7 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
       <div className="piles">
         <div className="pile">
           <div className="pile-label">Draw pile ({game.drawPileCount})</div>
-          <Card faceDown disabled={!canDraw} onClick={() => onDraw('pile')} />
+          <Card faceDown large disabled={!canDraw} onClick={() => onDraw('pile')} />
         </div>
 
         <div className="pile">
@@ -80,16 +90,16 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
             {pickableGroup.length > 0 ? (
               <div className={`discard-group ${pickableGroup.length > 1 ? 'discard-group-meld' : ''}`}>
                 {pickableGroup.map((c) => (
-                  <Card key={c.id} card={c} disabled={!canDraw} onClick={() => onDraw('discard', c.id)} />
+                  <Card key={c.id} card={c} large disabled={!canDraw} onClick={() => onDraw('discard', c.id)} />
                 ))}
               </div>
             ) : (
-              <Card faceDown disabled />
+              <Card faceDown large disabled />
             )}
             {pendingGroup.length > 0 && (
               <div className="discard-pending" title="Just discarded — not yours to draw back">
                 {pendingGroup.map((c) => (
-                  <Card key={c.id} card={c} disabled />
+                  <Card key={c.id} card={c} large disabled />
                 ))}
               </div>
             )}
@@ -109,6 +119,7 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
             <Card
               key={c.id}
               card={c}
+              large
               selected={selected.has(c.id)}
               disabled={!isMyTurn || game.phase !== 'discard'}
               onClick={() => toggleCard(c.id)}
@@ -130,6 +141,11 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
         <RoundEndOverlay game={game} room={room} playerId={playerId} onNextRound={onNextRound} />
       )}
       {game.phase === 'game_end' && <GameEndOverlay game={game} room={room} playerId={playerId} />}
+
+      <button type="button" className="icon-button how-to-play-fab" onClick={() => setShowInstructions(true)} title="How to Play">
+        ?
+      </button>
+      {showInstructions && <InstructionsOverlay onClose={() => setShowInstructions(false)} />}
     </div>
   );
 }

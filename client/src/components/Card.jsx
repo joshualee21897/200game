@@ -1,9 +1,10 @@
 import { suitSymbol, isRed } from '../cardDisplay';
 
-export default function Card({ card, selected, disabled, onClick, faceDown, small }) {
+export default function Card({ card, selected, disabled, onClick, faceDown, small, large }) {
   const baseClasses = [
     'card',
     small ? 'card-small' : '',
+    large ? 'card-large' : '',
     disabled ? 'card-disabled' : '',
     onClick ? 'card-clickable' : '',
   ];

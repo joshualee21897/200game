@@ -210,14 +210,15 @@ button.secondary:active {
 
 .table {
   width: 100%;
-  max-width: 900px;
+  max-width: 1400px;
+  min-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   background: linear-gradient(180deg, #bfe6f5 0%, #bfe6f5 22%, #9bd177 45%, #6bab48 75%, #4f8a35 100%);
   border: none;
   border-radius: 26px;
-  padding: 24px;
+  padding: 32px;
   box-shadow: 0 16px 40px rgba(20, 60, 20, 0.28);
 }
 
@@ -291,8 +292,10 @@ button.secondary:active {
 }
 
 .piles {
+  flex: 1;
   display: flex;
-  gap: 32px;
+  align-items: center;
+  gap: 48px;
   justify-content: center;
   padding: 12px 0;
 }
@@ -364,6 +367,32 @@ button.secondary:active {
   width: 42px;
   height: 60px;
   border-radius: 8px;
+}
+
+.card-large {
+  width: 88px;
+  height: 124px;
+  border-radius: 14px;
+}
+
+.card-large .card-corner-rank {
+  font-size: 1.05rem;
+}
+
+.card-large .card-corner-suit {
+  font-size: 0.95rem;
+}
+
+.card-large .card-center-suit {
+  font-size: 2.3rem;
+}
+
+.card-large .card-joker-text {
+  font-size: 1.05rem;
+}
+
+.card-large .card-joker-star {
+  font-size: 0.9rem;
 }
 
 .card-red {
@@ -529,7 +558,7 @@ button.secondary:active {
 
 .hand {
   display: flex;
-  gap: 8px;
+  gap: 14px;
   flex-wrap: wrap;
   justify-content: center;
 }
@@ -797,6 +826,24 @@ button.secondary:active {
 
 .icon-button:hover {
   background: #ddf3d6;
+}
+
+.how-to-play-fab {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  font-size: 1.3rem;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(20, 60, 20, 0.3);
+  z-index: 5;
+}
+
+.how-to-play-fab:hover {
+  background: #fff;
+  transform: translateY(-2px);
 }
 
 .instructions-panel section {
