@@ -329,6 +329,7 @@ button.secondary:active {
   align-items: center;
   justify-content: flex-end;
   min-height: 6em;
+  margin-top: 1.6em;
 }
 
 .discard-history {
@@ -345,15 +346,20 @@ button.secondary:active {
   position: absolute;
 }
 
-/* Order is oldest-first, so the 1st child sits further back (bigger
-   offset) and the 2nd child - the most recently buried card, right
-   behind the live pile - peeks out the least, closest to the top. */
+/* A clear cascade, like a solitaire pile: order is oldest-first, so the
+   1st child sits furthest up (mostly covered by the ones after it) and
+   each later card - closer to the live pile on top - covers more of it,
+   down to the 3rd child sitting right behind the live pile. */
 .discard-history .card:nth-child(1) {
-  transform: translate(-10px, -16px) rotate(-3deg);
+  transform: translateY(-2.1em);
 }
 
 .discard-history .card:nth-child(2) {
-  transform: translate(-5px, -8px) rotate(-1.5deg);
+  transform: translateY(-1.4em);
+}
+
+.discard-history .card:nth-child(3) {
+  transform: translateY(-0.7em);
 }
 
 .discard-group,
