@@ -345,20 +345,15 @@ button.secondary:active {
   position: absolute;
 }
 
+/* Order is oldest-first, so the 1st child sits further back (bigger
+   offset) and the 2nd child - the most recently buried card, right
+   behind the live pile - peeks out the least, closest to the top. */
 .discard-history .card:nth-child(1) {
-  transform: rotate(-7deg) translate(-10px, 4px) scale(0.92);
+  transform: translate(-10px, -16px) rotate(-3deg);
 }
 
 .discard-history .card:nth-child(2) {
-  transform: rotate(5deg) translate(8px, 6px) scale(0.92);
-}
-
-.discard-history .card:nth-child(3) {
-  transform: rotate(-4deg) translate(-4px, -2px) scale(0.92);
-}
-
-.discard-history .card:nth-child(4) {
-  transform: rotate(8deg) translate(10px, -4px) scale(0.92);
+  transform: translate(-5px, -8px) rotate(-1.5deg);
 }
 
 .discard-group,

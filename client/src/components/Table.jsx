@@ -77,7 +77,7 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
   // to empty every turn and it's easy to tell a draw came from here vs. the
   // face-down pile.
   const shownIds = new Set([...pickableGroup, ...pendingGroup].map((c) => c.id));
-  const historyCards = (game.discardPile || []).filter((c) => !shownIds.has(c.id)).slice(-4);
+  const historyCards = (game.discardPile || []).filter((c) => !shownIds.has(c.id)).slice(-2);
 
   function toggleCard(id) {
     if (!isMyTurn || game.phase !== 'discard') return;
@@ -134,7 +134,7 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
             {historyCards.length > 0 && (
               <div className="discard-history" aria-hidden="true">
                 {historyCards.map((c) => (
-                  <Card key={c.id} card={c} large disabled />
+                  <Card key={c.id} card={c} large />
                 ))}
               </div>
             )}
