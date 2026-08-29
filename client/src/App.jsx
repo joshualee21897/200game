@@ -11,32 +11,40 @@ function App() {
   const [state, setState] = useState({ room: null, game: null, hand: null, yourPlayerId: null });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const stateRef = useRef(state);
-
-  useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
+  // Tracks whether the *current live socket connection* has actually been
+  // joined to a room server-side - not the same thing as "do we have room
+  // data to show". A disconnect kills that association even though the
+  // stale room/game data stays on screen (so the UI doesn't flash blank),
+  // so this must be reset on every disconnect and only set once a join
+  // actually succeeds on the new connection - never inferred from React
+  // state, which lags behind and would otherwise make a real reconnect
+  // look like "already joined" and skip re-joining entirely.
+  const joinedRef = useRef(false);
 
   useEffect(() => {
     // A saved session survives page reloads and lets us silently re-attach
     // to a still-held seat after the underlying socket drops and
     // reconnects (a flaky connection, not a deliberate "leave"). It's only
-    // ever attempted when we don't already know we're in a room, so it
-    // never interrupts someone actively using the app.
+    // ever attempted when the current connection isn't already known to be
+    // joined, so it never interrupts someone actively using the app.
     function attemptAutoRejoin(retriesLeft = 2) {
-      if (stateRef.current.room) return;
+      if (joinedRef.current) return;
       const saved = loadSession();
       if (!saved) return;
-      call('room:join', { name: saved.name, roomCode: saved.roomCode }).catch((err) => {
-        // The old socket's seat may not have flipped to "disconnected" yet
-        // server-side when a flaky connection reconnects fast - give that a
-        // moment and retry before giving up on the saved session.
-        if (retriesLeft > 0 && /already active/i.test(err.message)) {
-          setTimeout(() => attemptAutoRejoin(retriesLeft - 1), 1500);
-        } else {
-          clearSession();
-        }
-      });
+      call('room:join', { name: saved.name, roomCode: saved.roomCode })
+        .then(() => {
+          joinedRef.current = true;
+        })
+        .catch((err) => {
+          // The old socket's seat may not have flipped to "disconnected" yet
+          // server-side when a flaky connection reconnects fast - give that
+          // a moment and retry before giving up on the saved session.
+          if (retriesLeft > 0 && /already active/i.test(err.message)) {
+            setTimeout(() => attemptAutoRejoin(retriesLeft - 1), 1500);
+          } else {
+            clearSession();
+          }
+        });
     }
 
     function onConnect() {
@@ -45,9 +53,13 @@ function App() {
     }
     function onDisconnect() {
       setConnected(false);
+      // This socket is dead; whatever room it was joined to no longer
+      // applies to whatever connection comes next.
+      joinedRef.current = false;
     }
     function onState(payload) {
       setState(payload);
+      if (payload.room) joinedRef.current = true;
     }
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);

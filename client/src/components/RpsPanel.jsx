@@ -8,7 +8,7 @@ function nameFor(room, id) {
   return room.seats.find((s) => s.id === id)?.name || 'Someone';
 }
 
-export default function RpsPanel({ room, game, playerId, onChoose }) {
+export default function RpsPanel({ room, game, playerId, onChoose, error }) {
   const rps = game.rps;
   const isActive = rps.active.includes(playerId);
   const hasSubmitted = rps.submitted.includes(playerId);
@@ -34,6 +34,8 @@ export default function RpsPanel({ room, game, playerId, onChoose }) {
           </div>
         ))}
       </div>
+
+      {error && <div className="error-text">{error}</div>}
 
       {isActive ? (
         <div className="rps-choices">

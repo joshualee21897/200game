@@ -18,7 +18,7 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
   if (game.phase === 'rps') {
     return (
       <>
-        <RpsPanel room={room} game={game} playerId={playerId} onChoose={onRpsChoice} />
+        <RpsPanel room={room} game={game} playerId={playerId} onChoose={onRpsChoice} error={error} />
         <button type="button" className="icon-button how-to-play-fab" onClick={() => setShowInstructions(true)} title="How to Play">
           ?
         </button>
