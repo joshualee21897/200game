@@ -1,8 +1,13 @@
 import { createServer } from 'node:http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import fs from 'node:fs';
 import express from 'express';
 import cors from 'cors';
 import { Server } from 'socket.io';
 import { RoomManager } from './roomManager.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = process.env.PORT || 3001;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
@@ -11,6 +16,14 @@ const ROUND_END_AUTO_ADVANCE_MS = 12000;
 const app = express();
 app.use(cors({ origin: CLIENT_ORIGIN }));
 app.get('/health', (_req, res) => res.json({ ok: true }));
+
+// In production the client is pre-built and served from here directly, so
+// the app runs as a single process/port with no separate Vite dev server.
+const clientDist = path.join(__dirname, '../../client/dist');
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+  app.get('*', (_req, res) => res.sendFile(path.join(clientDist, 'index.html')));
+}
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: CLIENT_ORIGIN } });

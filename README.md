@@ -26,6 +26,14 @@ Run just the server tests:
 npm test
 ```
 
+### Production mode
+
+```bash
+npm start
+```
+
+This builds the React client (`vite build`) and then runs only the Express server, which serves the built client alongside the API/Socket.io on a single port (`http://localhost:3001` by default, or `$PORT`). There's no Vite dev server involved. The client connects its socket to the same origin the page was loaded from, so no `CLIENT_ORIGIN`/`VITE_SERVER_URL` configuration is needed as long as everything is served from that one process.
+
 ## How a game works
 
 1. One player creates a room and shares the 5-letter room code.

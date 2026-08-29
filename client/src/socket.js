@@ -1,6 +1,10 @@
 import { io } from 'socket.io-client';
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
+// In production the server serves the built client itself, so the socket
+// connects to the same origin the page was loaded from by default. Dev
+// overrides this via VITE_SERVER_URL (see client/.env.development) since
+// the Vite dev server and the API server run on different ports.
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || undefined;
 
 export const socket = io(SERVER_URL, { autoConnect: true });
 
