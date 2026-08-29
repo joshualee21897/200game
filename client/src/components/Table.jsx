@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Card from './Card';
 import Timer from './Timer';
 import RoundEndOverlay from './RoundEndOverlay';
@@ -6,23 +6,61 @@ import GameEndOverlay from './GameEndOverlay';
 import RpsPanel from './RpsPanel';
 import InstructionsOverlay from './InstructionsOverlay';
 import { handValue } from '../gameRules';
+import { isMuted, setMuted, playDraw, playDiscard, playRoundEnd, playGameWin, playChoice } from '../sound';
 
 export default function Table({ room, game, hand, playerId, onDiscard, onDraw, onCall, onNextRound, onRpsChoice, error }) {
   const [selected, setSelected] = useState(() => new Set());
   const [showInstructions, setShowInstructions] = useState(false);
+  const [muted, setMutedState] = useState(() => isMuted());
+  const prevPhaseRef = useRef(game.phase);
 
   useEffect(() => {
     setSelected(new Set());
   }, [game.phase, game.roundNumber]);
 
+  useEffect(() => {
+    const prev = prevPhaseRef.current;
+    prevPhaseRef.current = game.phase;
+    if (prev === game.phase) return;
+    if (prev === 'draw' && game.phase === 'discard') playDraw();
+    else if (prev === 'discard' && game.phase === 'draw') playDiscard();
+    if (game.phase === 'round_end' && prev !== 'round_end') playRoundEnd();
+    if (game.phase === 'game_end' && prev !== 'game_end') playGameWin();
+  }, [game.phase]);
+
+  function toggleMute() {
+    const next = !muted;
+    setMuted(next);
+    setMutedState(next);
+  }
+
+  function handleRpsChoose(move) {
+    playChoice();
+    onRpsChoice(move);
+  }
+
+  const soundButtons = (
+    <>
+      <button
+        type="button"
+        className="icon-button mute-fab"
+        onClick={toggleMute}
+        title={muted ? 'Unmute sound' : 'Mute sound'}
+      >
+        {muted ? '🔇' : '🔊'}
+      </button>
+      <button type="button" className="icon-button how-to-play-fab" onClick={() => setShowInstructions(true)} title="How to Play">
+        ?
+      </button>
+      {showInstructions && <InstructionsOverlay onClose={() => setShowInstructions(false)} />}
+    </>
+  );
+
   if (game.phase === 'rps') {
     return (
       <>
-        <RpsPanel room={room} game={game} playerId={playerId} onChoose={onRpsChoice} error={error} />
-        <button type="button" className="icon-button how-to-play-fab" onClick={() => setShowInstructions(true)} title="How to Play">
-          ?
-        </button>
-        {showInstructions && <InstructionsOverlay onClose={() => setShowInstructions(false)} />}
+        <RpsPanel room={room} game={game} playerId={playerId} onChoose={handleRpsChoose} error={error} />
+        {soundButtons}
       </>
     );
   }
@@ -34,6 +72,12 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
   const canDraw = isMyTurn && game.phase === 'draw';
   const pickableGroup = game.pickableGroup || [];
   const pendingGroup = game.pendingGroup || [];
+  // A faded, fanned-out peek at the most recently buried discards - purely
+  // decorative (not pickable), just so the pile doesn't look like it resets
+  // to empty every turn and it's easy to tell a draw came from here vs. the
+  // face-down pile.
+  const shownIds = new Set([...pickableGroup, ...pendingGroup].map((c) => c.id));
+  const historyCards = (game.discardPile || []).filter((c) => !shownIds.has(c.id)).slice(-4);
 
   function toggleCard(id) {
     if (!isMyTurn || game.phase !== 'discard') return;
@@ -87,6 +131,13 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
             Discard pile{pickableGroup.length > 1 ? ` — pick any of ${pickableGroup.length}` : ''}
           </div>
           <div className="discard-stack">
+            {historyCards.length > 0 && (
+              <div className="discard-history" aria-hidden="true">
+                {historyCards.map((c) => (
+                  <Card key={c.id} card={c} large disabled />
+                ))}
+              </div>
+            )}
             {pickableGroup.length > 0 ? (
               <div className={`discard-group ${pickableGroup.length > 1 ? 'discard-group-meld' : ''}`}>
                 {pickableGroup.map((c) => (
@@ -142,10 +193,7 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
       )}
       {game.phase === 'game_end' && <GameEndOverlay game={game} room={room} playerId={playerId} />}
 
-      <button type="button" className="icon-button how-to-play-fab" onClick={() => setShowInstructions(true)} title="How to Play">
-        ?
-      </button>
-      {showInstructions && <InstructionsOverlay onClose={() => setShowInstructions(false)} />}
+      {soundButtons}
     </div>
   );
 }

@@ -138,6 +138,7 @@ test('call() applies exact-multiple-of-50 rebate', () => {
   // 49 + 0 = 49, not a milestone, stays 49 for caller (win => delta 0)
   assert.equal(state.players.find((p) => p.id === caller.id).score, 49);
   assert.equal(state.phase, 'round_end');
+  assert.equal(state.roundResult.callerId, caller.id);
 });
 
 test('call() rebates exactly at 100 and keeps playing at exactly 200', () => {

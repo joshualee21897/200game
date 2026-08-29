@@ -331,6 +331,42 @@ button.secondary:active {
   min-height: 6em;
 }
 
+.discard-history {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.discard-history .card {
+  position: absolute;
+}
+
+.discard-history .card:nth-child(1) {
+  transform: rotate(-7deg) translate(-10px, 4px) scale(0.92);
+}
+
+.discard-history .card:nth-child(2) {
+  transform: rotate(5deg) translate(8px, 6px) scale(0.92);
+}
+
+.discard-history .card:nth-child(3) {
+  transform: rotate(-4deg) translate(-4px, -2px) scale(0.92);
+}
+
+.discard-history .card:nth-child(4) {
+  transform: rotate(8deg) translate(10px, -4px) scale(0.92);
+}
+
+.discard-group,
+.discard-pending {
+  position: relative;
+  z-index: 1;
+}
+
 .discard-group {
   display: flex;
   gap: 0.375em;
@@ -857,6 +893,24 @@ button.secondary:active {
 }
 
 .how-to-play-fab:hover {
+  background: #fff;
+  transform: translateY(-2px);
+}
+
+.mute-fab {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  font-size: 1.2rem;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(20, 60, 20, 0.3);
+  z-index: 5;
+}
+
+.mute-fab:hover {
   background: #fff;
   transform: translateY(-2px);
 }

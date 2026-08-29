@@ -271,6 +271,7 @@ export class Game {
 
     this.roundResult = {
       ...result,
+      callerId: playerId,
       hands: Object.fromEntries(this.players.map((p) => [p.id, p.hand])),
       scoresAfter: Object.fromEntries(this.players.map((p) => [p.id, p.score])),
     };

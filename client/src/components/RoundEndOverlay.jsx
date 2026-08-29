@@ -1,10 +1,27 @@
 import Card from './Card';
 
-const OUTCOME_LABEL = {
-  win: 'won the round!',
-  tie: 'tied the caller — no bonus for the caller.',
-  wrong_call: 'called wrongly — 30 point penalty!',
-};
+function nameFor(room, id) {
+  return room.seats.find((s) => s.id === id)?.name || 'Someone';
+}
+
+function listNames(names) {
+  if (names.length <= 1) return names[0] || '';
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+function outcomeText(result, room) {
+  const callerName = nameFor(room, result.callerId);
+  if (result.outcome === 'win') {
+    return `${callerName} won the round!`;
+  }
+  if (result.outcome === 'wrong_call') {
+    return `${callerName} called wrongly — 30 point penalty!`;
+  }
+  const tierNames = Object.entries(result.deltas)
+    .filter(([id, delta]) => id !== result.callerId && delta === 0)
+    .map(([id]) => nameFor(room, id));
+  return `${callerName} called, but ${listNames(tierNames)} tied them — no bonus for the caller.`;
+}
 
 export default function RoundEndOverlay({ game, room, playerId, onNextRound }) {
   const result = game.roundResult;
@@ -13,7 +30,7 @@ export default function RoundEndOverlay({ game, room, playerId, onNextRound }) {
     <div className="overlay">
       <div className="overlay-panel">
         <h2>Round {game.roundNumber} Result</h2>
-        <p className="outcome-line">{OUTCOME_LABEL[result.outcome]}</p>
+        <p className="outcome-line">{outcomeText(result, room)}</p>
 
         <table className="result-table">
           <thead>
@@ -31,7 +48,10 @@ export default function RoundEndOverlay({ game, room, playerId, onNextRound }) {
               const delta = result.deltas[s.id];
               return (
                 <tr key={s.id} className={s.id === playerId ? 'row-you' : ''}>
-                  <td>{s.name}</td>
+                  <td>
+                    {s.name}
+                    {s.id === result.callerId && <span className="badge">Caller</span>}
+                  </td>
                   <td className="hand-cell">
                     {(result.hands[s.id] || []).map((c) => (
                       <Card key={c.id} card={c} small />
