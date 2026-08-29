@@ -217,6 +217,20 @@ export class Game {
     this.drawPile = shuffle(pool, this.rng);
   }
 
+  // Best-effort version of reshuffleIfNeeded used right after the draw pile
+  // is emptied, so its count never sits at a stale 0 waiting for someone to
+  // attempt another draw first - it refills proactively the moment the last
+  // card is taken. Silently no-ops if there's genuinely nothing left to
+  // reshuffle yet (rare, very late in a round).
+  topUpDrawPile() {
+    try {
+      this.reshuffleIfNeeded();
+    } catch {
+      // Nothing to reshuffle yet - leave it empty; the pickable discard
+      // group is still available to draw from instead.
+    }
+  }
+
   draw(playerId, source, cardId) {
     this.requireTurn(playerId, 'draw');
     const player = this.playerById(playerId);
@@ -233,6 +247,7 @@ export class Game {
     } else if (source === 'pile') {
       this.reshuffleIfNeeded();
       card = this.drawPile.pop();
+      if (this.drawPile.length === 0) this.topUpDrawPile();
     } else {
       throw new Error('Invalid draw source');
     }
