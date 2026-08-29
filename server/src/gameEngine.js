@@ -279,10 +279,12 @@ export class Game {
 
     const result = resolveCall(this.players, playerId);
     let bustedPlayerId = null;
+    const milestoneHitPlayerIds = [];
     for (const p of this.players) {
       const delta = result.deltas[p.id];
-      let total = p.score + delta;
-      total = milestoneRebate(total);
+      const preRebate = p.score + delta;
+      const total = milestoneRebate(preRebate);
+      if (total !== preRebate) milestoneHitPlayerIds.push(p.id);
       p.score = total;
       if (total >= 201 && !bustedPlayerId) bustedPlayerId = p.id;
     }
@@ -292,6 +294,7 @@ export class Game {
       callerId: playerId,
       hands: Object.fromEntries(this.players.map((p) => [p.id, p.hand])),
       scoresAfter: Object.fromEntries(this.players.map((p) => [p.id, p.score])),
+      milestoneHitPlayerIds,
     };
 
     if (bustedPlayerId) {

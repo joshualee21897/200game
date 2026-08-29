@@ -211,6 +211,19 @@ test('exact landing on 200 rebates to 150 instead of busting', () => {
   const opp = state.players.find((p) => p.id === opponent.id);
   assert.equal(opp.score, 150);
   assert.equal(state.phase, 'round_end');
+  assert.deepEqual(state.roundResult.milestoneHitPlayerIds, [opponent.id]);
+});
+
+test('milestoneHitPlayerIds is empty when nobody lands on an exact milestone', () => {
+  const byId = cardsById();
+  const game = new Game(makePlayers(2), { rng: makeRng(10) });
+  game.startRound();
+  const caller = game.currentPlayer;
+  const opponent = game.players.find((p) => p.id !== caller.id);
+  caller.hand = [byId['AS']]; // value 1
+  opponent.hand = [byId['9S']]; // value 9, 0 + 9 = 9, not a milestone
+  const state = game.call(caller.id);
+  assert.deepEqual(state.roundResult.milestoneHitPlayerIds, []);
 });
 
 test('draw pile reshuffles from discard pile, preserving pickable + pending groups', () => {

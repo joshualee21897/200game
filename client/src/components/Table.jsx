@@ -6,7 +6,18 @@ import GameEndOverlay from './GameEndOverlay';
 import RpsPanel from './RpsPanel';
 import InstructionsOverlay from './InstructionsOverlay';
 import { handValue } from '../gameRules';
-import { isMuted, setMuted, playDraw, playDiscard, playRoundEnd, playGameWin, playChoice } from '../sound';
+import {
+  isMuted,
+  setMuted,
+  playDraw,
+  playDiscard,
+  playRoundEnd,
+  playGameWin,
+  playChoice,
+  playWrongCall,
+  playMilestone,
+  playBust,
+} from '../sound';
 
 export default function Table({ room, game, hand, playerId, onDiscard, onDraw, onCall, onNextRound, onRpsChoice, error }) {
   const [selected, setSelected] = useState(() => new Set());
@@ -24,8 +35,15 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
     if (prev === game.phase) return;
     if (prev === 'draw' && game.phase === 'discard') playDraw();
     else if (prev === 'discard' && game.phase === 'draw') playDiscard();
-    if (game.phase === 'round_end' && prev !== 'round_end') playRoundEnd();
-    if (game.phase === 'game_end' && prev !== 'game_end') playGameWin();
+    if (game.phase === 'round_end' && prev !== 'round_end') {
+      if (game.roundResult?.outcome === 'wrong_call') playWrongCall();
+      else playRoundEnd();
+      if (game.roundResult?.milestoneHitPlayerIds?.length > 0) playMilestone();
+    }
+    if (game.phase === 'game_end' && prev !== 'game_end') {
+      if (game.finalResult?.bustedPlayerId === playerId) playBust();
+      else playGameWin();
+    }
   }, [game.phase]);
 
   function toggleMute() {

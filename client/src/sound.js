@@ -128,3 +128,29 @@ export function playGameWin() {
     );
   });
 }
+
+export function playWrongCall() {
+  // A comedic "womp womp" - two low descending glides, trombone-style.
+  play((ctx, t) => {
+    [0, 0.34].forEach((offset) => {
+      tone(ctx, t + offset, { freq: 300, freqEnd: 170, duration: 0.3, type: 'sawtooth', gain: 0.1 });
+    });
+  });
+}
+
+export function playMilestone() {
+  // A bright ascending sparkle run - celebratory, but distinct from the
+  // game-win fanfare so a mid-game milestone doesn't feel like the finale.
+  play((ctx, t) => {
+    [784, 988, 1175, 1568].forEach((freq, i) => tone(ctx, t + i * 0.07, { freq, duration: 0.16, gain: 0.12 }));
+    noiseBurst(ctx, t + 0.3, { duration: 0.12, filterFreq: 4200, Q: 1, gain: 0.1 });
+  });
+}
+
+export function playBust() {
+  // A balloon pop followed by a low, deflating groan.
+  play((ctx, t) => {
+    noiseBurst(ctx, t, { duration: 0.05, filterFreq: 1200, Q: 0.7, gain: 0.2 });
+    tone(ctx, t + 0.03, { freq: 260, freqEnd: 80, duration: 0.5, type: 'sawtooth', gain: 0.13 });
+  });
+}

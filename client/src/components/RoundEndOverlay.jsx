@@ -21,13 +21,40 @@ function outcomeText(result, room) {
   return `${callerName} called wrongly — 30 point penalty!`;
 }
 
+function ClownBanner({ name }) {
+  return (
+    <div className="clown-banner">
+      <span className="clown-emoji" aria-hidden="true">
+        🤡
+      </span>
+      <span className="clown-text">Jokes on you, {name}!</span>
+    </div>
+  );
+}
+
+function MilestoneBanner({ names }) {
+  return (
+    <div className="milestone-banner">
+      <span className="milestone-burst" aria-hidden="true">
+        <span className="milestone-star">✨</span>
+        <span className="milestone-star">🌟</span>
+        <span className="milestone-star">✨</span>
+      </span>
+      <span className="milestone-text">Milestone bonus for {listNames(names)} — 50 points shaved off!</span>
+    </div>
+  );
+}
+
 export default function RoundEndOverlay({ game, room, playerId, onNextRound }) {
   const result = game.roundResult;
+  const milestoneNames = (result.milestoneHitPlayerIds || []).map((id) => nameFor(room, id));
 
   return (
     <div className="overlay">
       <div className="overlay-panel">
         <h2>Round {game.roundNumber} Result</h2>
+        {result.outcome === 'wrong_call' && <ClownBanner name={nameFor(room, result.callerId)} />}
+        {milestoneNames.length > 0 && <MilestoneBanner names={milestoneNames} />}
         <p className="outcome-line">{outcomeText(result, room)}</p>
 
         <table className="result-table">
