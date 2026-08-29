@@ -51,7 +51,7 @@ function App() {
   const handleStart = () => runAction('room:start', {});
   const handleNextRound = () => runAction('room:nextRound', {});
   const handleDiscard = (cardIds) => runAction('game:discard', { cardIds });
-  const handleDraw = (source) => runAction('game:draw', { source });
+  const handleDraw = (source, cardId) => runAction('game:draw', { source, cardId });
   const handleCall = () => runAction('game:call', {});
 
   if (!connected) {

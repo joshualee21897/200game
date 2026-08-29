@@ -17,7 +17,8 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
   const canDiscard = isMyTurn && game.phase === 'discard' && selected.size > 0;
   const canCall = isMyTurn && game.phase === 'discard' && myValue <= 5;
   const canDraw = isMyTurn && game.phase === 'draw';
-  const topDiscard = game.discardPile[game.discardPile.length - 1];
+  const pickableGroup = game.pickableGroup || [];
+  const pendingGroup = game.pendingGroup || [];
 
   function toggleCard(id) {
     if (!isMyTurn || game.phase !== 'discard') return;
@@ -67,12 +68,27 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
         </div>
 
         <div className="pile">
-          <div className="pile-label">Discard pile</div>
-          {topDiscard ? (
-            <Card card={topDiscard} disabled={!canDraw} onClick={() => onDraw('discard')} />
-          ) : (
-            <Card faceDown disabled />
-          )}
+          <div className="pile-label">
+            Discard pile{pickableGroup.length > 1 ? ` — pick any of ${pickableGroup.length}` : ''}
+          </div>
+          <div className="discard-stack">
+            {pickableGroup.length > 0 ? (
+              <div className={`discard-group ${pickableGroup.length > 1 ? 'discard-group-meld' : ''}`}>
+                {pickableGroup.map((c) => (
+                  <Card key={c.id} card={c} disabled={!canDraw} onClick={() => onDraw('discard', c.id)} />
+                ))}
+              </div>
+            ) : (
+              <Card faceDown disabled />
+            )}
+            {pendingGroup.length > 0 && (
+              <div className="discard-pending" title="Just discarded — not yours to draw back">
+                {pendingGroup.map((c) => (
+                  <Card key={c.id} card={c} disabled />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

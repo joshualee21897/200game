@@ -8,8 +8,3 @@ export function suitSymbol(suit) {
 export function isRed(card) {
   return RED_SUITS.has(card.suit);
 }
-
-export function cardLabel(card) {
-  if (card.rank === 'JOKER') return 'JOKER';
-  return `${card.rank}${suitSymbol(card.suit)}`;
-}

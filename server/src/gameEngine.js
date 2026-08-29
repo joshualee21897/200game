@@ -66,6 +66,12 @@ export class Game {
     this.roundNumber = 0;
     this.drawPile = [];
     this.discardPile = [];
+    // pickableGroup: cards currently choosable via a "draw from discard"
+    // action - the group discarded on the *previous* turn. pendingGroup: the
+    // cards the *current* player just discarded this turn - visible on top
+    // of the pile, but not choosable by that same player (see draw()).
+    this.pickableGroup = [];
+    this.pendingGroup = null;
     this.turnIndex = Math.floor(this.rng() * this.players.length);
     this.phase = 'waiting';
     this.roundResult = null;
@@ -91,6 +97,8 @@ export class Game {
     }
     this.drawPile = deck;
     this.discardPile = [this.drawPile.pop()];
+    this.pickableGroup = [...this.discardPile];
+    this.pendingGroup = null;
     if (startingPlayerId) {
       this.turnIndex = this.players.findIndex((p) => p.id === startingPlayerId);
     }
@@ -125,27 +133,47 @@ export class Game {
     const idSet = new Set(cardIds);
     player.hand = player.hand.filter((c) => !idSet.has(c.id));
     this.discardPile.push(...cards);
+    // Not pickable yet - a player can never draw their own just-made
+    // discard. It becomes the pickable group for the *next* player once
+    // this turn ends (see advanceTurn).
+    this.pendingGroup = cards;
     this.phase = 'draw';
     return this.getState();
   }
 
-  draw(playerId, source) {
+  /**
+   * Cards that must not be shuffled away: the group discarded last turn
+   * (still pickable) plus whatever the current player just threw this turn
+   * (about to become pickable). Everything else in the discard pile is
+   * fair game to reshuffle into a fresh draw pile.
+   */
+  reshuffleIfNeeded() {
+    if (this.drawPile.length > 0) return;
+    const keepIds = new Set([...this.pickableGroup, ...(this.pendingGroup || [])].map((c) => c.id));
+    const keep = this.discardPile.filter((c) => keepIds.has(c.id));
+    const pool = this.discardPile.filter((c) => !keepIds.has(c.id));
+    if (pool.length === 0) {
+      throw new Error('No cards left in draw pile; draw from discard instead');
+    }
+    this.discardPile = keep;
+    this.drawPile = shuffle(pool, this.rng);
+  }
+
+  draw(playerId, source, cardId) {
     this.requireTurn(playerId, 'draw');
     const player = this.playerById(playerId);
     let card;
     if (source === 'discard') {
-      if (this.discardPile.length === 0) throw new Error('Discard pile is empty');
-      card = this.discardPile.pop();
-    } else if (source === 'pile') {
-      if (this.drawPile.length === 0) {
-        const pool = this.discardPile.slice(0, -1);
-        if (pool.length === 0) {
-          throw new Error('No cards left in draw pile; draw from discard instead');
-        }
-        const top = this.discardPile[this.discardPile.length - 1];
-        this.discardPile = [top];
-        this.drawPile = shuffle(pool, this.rng);
+      if (!cardId) throw new Error('Must specify which discard-pile card to take');
+      if (!this.pickableGroup.some((c) => c.id === cardId)) {
+        throw new Error('That card is not currently pickable from the discard pile');
       }
+      const idx = this.discardPile.findIndex((c) => c.id === cardId);
+      card = this.discardPile[idx];
+      this.discardPile.splice(idx, 1);
+      this.pickableGroup = this.pickableGroup.filter((c) => c.id !== cardId);
+    } else if (source === 'pile') {
+      this.reshuffleIfNeeded();
       card = this.drawPile.pop();
     } else {
       throw new Error('Invalid draw source');
@@ -156,6 +184,12 @@ export class Game {
   }
 
   advanceTurn() {
+    // Whatever the player who just finished their turn discarded becomes
+    // the pickable group for the next player; anything left unclaimed from
+    // before is now buried (per the "only the immediately preceding turn's
+    // group" rule).
+    this.pickableGroup = this.pendingGroup || [];
+    this.pendingGroup = null;
     this.turnIndex = (this.turnIndex + 1) % this.players.length;
     this.phase = 'discard';
     this.turnDeadline = Date.now() + TURN_SECONDS * 1000;
@@ -200,6 +234,18 @@ export class Game {
     return this.getState();
   }
 
+  autoDraw() {
+    const player = this.currentPlayer;
+    try {
+      this.draw(player.id, 'pile');
+    } catch {
+      // Draw pile (and reshuffle pool) exhausted - fall back to whatever is
+      // currently pickable from the discard pile.
+      const card = this.pickableGroup[0];
+      this.draw(player.id, 'discard', card.id);
+    }
+  }
+
   handleTimeout() {
     if (this.phase === 'discard') {
       const player = this.currentPlayer;
@@ -210,10 +256,9 @@ export class Game {
         const card = player.hand[0];
         this.discard(player.id, [card.id]);
       }
-      this.draw(player.id, this.drawPile.length > 0 ? 'pile' : 'discard');
+      this.autoDraw();
     } else if (this.phase === 'draw') {
-      const player = this.currentPlayer;
-      this.draw(player.id, this.drawPile.length > 0 ? 'pile' : 'discard');
+      this.autoDraw();
     }
     return this.getState();
   }
@@ -231,6 +276,8 @@ export class Game {
       turnDeadline: this.turnDeadline,
       drawPileCount: this.drawPile.length,
       discardPile: this.discardPile,
+      pickableGroup: this.pickableGroup,
+      pendingGroup: this.pendingGroup || [],
       players: this.players.map((p) => ({
         id: p.id,
         name: p.name,

@@ -157,11 +157,11 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('game:draw', ({ source } = {}, cb) => {
+  socket.on('game:draw', ({ source, cardId } = {}, cb) => {
     try {
       const room = roomManager.getRoom(socket.data.roomCode);
       if (!room || !room.game) throw new Error('No active game');
-      room.game.draw(socket.data.playerId, source);
+      room.game.draw(socket.data.playerId, source, cardId);
       cb?.({ ok: true });
       broadcastState(room);
       scheduleTurnTimer(room);

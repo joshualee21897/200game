@@ -180,13 +180,15 @@ test('exact landing on 200 rebates to 150 instead of busting', () => {
   assert.equal(state.phase, 'round_end');
 });
 
-test('draw pile reshuffles from discard pile when exhausted', () => {
+test('draw pile reshuffles from discard pile, preserving pickable + pending groups', () => {
   const game = new Game(makePlayers(2), { rng: makeRng(11) });
   game.startRound();
   // Force the draw pile empty and stack up a multi-card discard pile.
   const byId = cardsById();
   game.drawPile = [];
-  game.discardPile = [byId['2S'], byId['3H'], byId['4D']]; // top = 4D
+  game.discardPile = [byId['2S'], byId['3H'], byId['4D']];
+  game.pickableGroup = [byId['4D']]; // last turn's discard, still pickable
+  game.pendingGroup = null;
   const player = game.currentPlayer;
   const before = player.hand.length;
   game.phase = 'draw';
@@ -221,4 +223,94 @@ test('handleTimeout during draw phase just auto-draws', () => {
   assert.equal(player.hand.length, handAfterDiscard + 1);
   assert.equal(game.phase, 'discard');
   assert.notEqual(game.currentPlayer.id, player.id);
+});
+
+// --- Bug fix: drawing from the discard pile must never return the current
+// player's own just-made discard. ---
+
+test('a player cannot draw the card they themselves just discarded', () => {
+  const game = new Game(makePlayers(2), { rng: makeRng(20) });
+  game.startRound();
+  const player = game.currentPlayer;
+  const thrown = player.hand[0];
+  game.discard(player.id, [thrown.id]);
+  assert.throws(() => game.draw(player.id, 'discard', thrown.id), /not currently pickable/);
+});
+
+test('drawing from discard gives the previous turn\'s card, not the current turn\'s', () => {
+  const game = new Game(makePlayers(2), { rng: makeRng(21) });
+  game.startRound();
+  const starterCard = game.discardPile[0]; // flipped at round start, pickable by player 1
+  const p1 = game.currentPlayer;
+  const p1Thrown = p1.hand[0];
+  game.discard(p1.id, [p1Thrown.id]);
+  // p1's draw options from discard: only the pre-round starter card.
+  assert.deepEqual(game.pickableGroup.map((c) => c.id), [starterCard.id]);
+  game.draw(p1.id, 'discard', starterCard.id);
+
+  const p2 = game.currentPlayer;
+  assert.notEqual(p2.id, p1.id);
+  const p2Thrown = p2.hand[0];
+  game.discard(p2.id, [p2Thrown.id]);
+  // p2's draw options: only what p1 discarded, never p2's own throw.
+  assert.deepEqual(game.pickableGroup.map((c) => c.id), [p1Thrown.id]);
+  assert.throws(() => game.draw(p2.id, 'discard', p2Thrown.id));
+  game.draw(p2.id, 'discard', p1Thrown.id);
+  assert.equal(p2.hand.some((c) => c.id === p1Thrown.id), true);
+});
+
+test('rejects a discard-pile draw for a card outside the pickable set', () => {
+  const game = new Game(makePlayers(2), { rng: makeRng(22) });
+  game.startRound();
+  const player = game.currentPlayer;
+  game.discard(player.id, [player.hand[0].id]);
+  assert.throws(() => game.draw(player.id, 'discard', 'not-a-real-card-id'));
+});
+
+// --- Rule change: any card from a just-discarded meld is pickable, not
+// just the physical top. ---
+
+test('next player can pick any card from a just-discarded meld', () => {
+  const byId = cardsById();
+  const game = new Game(makePlayers(2), { rng: makeRng(23) });
+  game.startRound();
+  const p1 = game.currentPlayer;
+  p1.hand = [byId['7S'], byId['7H'], byId['7D'], byId['2C'], byId['3D']];
+  game.discard(p1.id, ['7S', '7H', '7D']); // triple meld
+  game.draw(p1.id, 'pile');
+
+  const p2 = game.currentPlayer;
+  assert.deepEqual(
+    game.pickableGroup.map((c) => c.id).sort(),
+    ['7D', '7H', '7S']
+  );
+  game.discard(p2.id, [p2.hand[0].id]); // p2's own discard, required before they can draw
+  const before = p2.hand.length;
+  game.draw(p2.id, 'discard', '7H'); // pick the *middle* card, not the physical top
+  assert.equal(p2.hand.length, before + 1);
+  assert.equal(p2.hand.some((c) => c.id === '7H'), true);
+  // 7H is gone from the discard pile; 7S and 7D remain there (unclaimed).
+  assert.equal(game.discardPile.some((c) => c.id === '7H'), false);
+  assert.equal(game.discardPile.some((c) => c.id === '7S'), true);
+  assert.equal(game.discardPile.some((c) => c.id === '7D'), true);
+});
+
+test('unclaimed meld cards become buried once the next turn discards', () => {
+  const byId = cardsById();
+  const game = new Game(makePlayers(3), { rng: makeRng(24) });
+  game.startRound();
+  const p1 = game.currentPlayer;
+  p1.hand = [byId['7S'], byId['7H'], byId['7D'], byId['2C'], byId['3D']];
+  game.discard(p1.id, ['7S', '7H', '7D']);
+  game.draw(p1.id, 'pile'); // p1 ignores the meld, draws from the pile instead
+
+  const p2 = game.currentPlayer;
+  const p2Thrown = p2.hand[0];
+  game.discard(p2.id, [p2Thrown.id]); // p2 doesn't touch the meld either
+  game.draw(p2.id, 'pile');
+
+  const p3 = game.currentPlayer;
+  // Only p2's discard is pickable now - the meld from p1's turn is buried.
+  assert.deepEqual(game.pickableGroup.map((c) => c.id), [p2Thrown.id]);
+  assert.throws(() => game.draw(p3.id, 'discard', '7S'));
 });
