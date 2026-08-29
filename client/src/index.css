@@ -1,6 +1,6 @@
 :root {
-  color-scheme: light dark;
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: light;
+  font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 * {
@@ -9,10 +9,17 @@
 
 body {
   margin: 0;
-  background: #0f1d16;
-  color: #eef4ef;
+  background: linear-gradient(180deg, #bfe6f5 0%, #d9f0e0 55%, #eaf6e2 100%);
+  color: #2b3a2a;
+  min-height: 100vh;
 }
 
 button {
   font-family: inherit;
+}
+
+h1,
+h2,
+h3 {
+  font-family: 'Baloo 2', 'Nunito', system-ui, sans-serif;
 }

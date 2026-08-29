@@ -16,12 +16,14 @@ export default function RpsPanel({ room, game, playerId, onChoose }) {
 
   return (
     <div className="table rps-table">
-      <h2>Who goes first?</h2>
-      <p className="subtitle">
-        {rps.active.length === room.seats.length
-          ? 'Rock-paper-scissors decides who opens round 1.'
-          : `Throw-off continues between ${rps.active.map((id) => nameFor(room, id)).join(' and ')}.`}
-      </p>
+      <div className="rps-header">
+        <h2>Who goes first?</h2>
+        <p className="subtitle">
+          {rps.active.length === room.seats.length
+            ? 'Rock-paper-scissors decides who opens round 1.'
+            : `Throw-off continues between ${rps.active.map((id) => nameFor(room, id)).join(' and ')}.`}
+        </p>
+      </div>
 
       <div className="rps-players">
         {rps.active.map((id) => (
@@ -49,7 +51,9 @@ export default function RpsPanel({ room, game, playerId, onChoose }) {
           ))}
         </div>
       ) : (
-        <p className="subtitle">You've been eliminated from the throw-off &mdash; waiting to see who starts.</p>
+        <div className="rps-header">
+          <p className="subtitle">You've been eliminated from the throw-off &mdash; waiting to see who starts.</p>
+        </div>
       )}
 
       {rps.lastRound && (
