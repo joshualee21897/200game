@@ -329,7 +329,7 @@ button.secondary:active {
   align-items: center;
   justify-content: flex-end;
   min-height: 6em;
-  margin-top: 1.6em;
+  margin-top: 5em;
 }
 
 .discard-history {
@@ -347,19 +347,21 @@ button.secondary:active {
 }
 
 /* A clear cascade, like a solitaire pile: order is oldest-first, so the
-   1st child sits furthest up (mostly covered by the ones after it) and
-   each later card - closer to the live pile on top - covers more of it,
-   down to the 3rd child sitting right behind the live pile. */
+   1st child sits furthest up and each later card - closer to the live
+   pile on top - covers more of it, down to the 3rd child sitting right
+   behind the live pile. The step between cards (~1.8em) is deliberately
+   taller than the corner rank+suit block so each card's index stays
+   fully readable instead of being sliced off by the card in front. */
 .discard-history .card:nth-child(1) {
-  transform: translateY(-2.1em);
+  transform: translateY(-6.2em);
 }
 
 .discard-history .card:nth-child(2) {
-  transform: translateY(-1.4em);
+  transform: translateY(-3.9em);
 }
 
 .discard-history .card:nth-child(3) {
-  transform: translateY(-0.7em);
+  transform: translateY(-1.6em);
 }
 
 .discard-group,
