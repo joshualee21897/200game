@@ -14,8 +14,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3001;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 const ROUND_END_AUTO_ADVANCE_MS = 12000;
-const BOT_THINK_MS_MIN = 700;
-const BOT_THINK_MS_MAX = 1500;
+const BOT_THINK_MS = 3000;
 
 const app = express();
 app.use(cors({ origin: CLIENT_ORIGIN }));
@@ -89,7 +88,7 @@ function scheduleRoundAdvance(room) {
 }
 
 function botThinkDelay() {
-  return BOT_THINK_MS_MIN + Math.random() * (BOT_THINK_MS_MAX - BOT_THINK_MS_MIN);
+  return BOT_THINK_MS;
 }
 
 function isBotSeat(room, playerId) {
