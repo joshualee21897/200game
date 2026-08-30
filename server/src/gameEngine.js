@@ -26,8 +26,12 @@ function milestoneRebate(total) {
  *    adds their own value as normal. The caller still keeps the deal for
  *    the next round either way (win or push).
  *  - someone strictly beats the caller -> wrong call: caller adds a flat 30
- *    penalty only (not their hand value on top of it), everyone else adds
- *    their own value as normal; whoever was strictly lowest opens next.
+ *    penalty only (not their hand value on top of it). Only whoever has
+ *    the single lowest hand among the non-callers effectively "wins" the
+ *    round and adds nothing (ties for that lowest spot all get the same
+ *    pass); everyone else - including anyone else who merely beat the
+ *    caller without being the overall lowest - still adds their own value
+ *    as normal. Whoever was lowest opens next.
  */
 export function resolveCall(players, callerId) {
   const values = players.map((p) => ({ id: p.id, value: handValue(p.hand) }));
@@ -39,12 +43,14 @@ export function resolveCall(players, callerId) {
   const deltas = {};
   let outcome;
   let nextStarterId;
+  let lowestOtherIds = [];
   if (someoneStrictlyLower) {
     outcome = 'wrong_call';
     deltas[callerId] = 30;
-    for (const v of others) deltas[v.id] = v.value;
-    const minValue = Math.min(...others.map((v) => v.value));
-    nextStarterId = others.find((v) => v.value === minValue).id;
+    const minOthers = Math.min(...others.map((v) => v.value));
+    lowestOtherIds = others.filter((v) => v.value === minOthers).map((v) => v.id);
+    for (const v of others) deltas[v.id] = lowestOtherIds.includes(v.id) ? 0 : v.value;
+    nextStarterId = lowestOtherIds[0];
   } else {
     outcome = tiedWithCaller.length > 0 ? 'push' : 'win';
     deltas[callerId] = 0;
@@ -52,7 +58,7 @@ export function resolveCall(players, callerId) {
     nextStarterId = callerId;
   }
 
-  return { outcome, values, deltas, nextStarterId, tiedWithCaller };
+  return { outcome, values, deltas, nextStarterId, tiedWithCaller, lowestOtherIds };
 }
 
 export const RPS_MOVES = ['rock', 'paper', 'scissors'];
@@ -312,6 +318,7 @@ export class Game {
       deltas: result.deltas,
       scoresAfter: this.roundResult.scoresAfter,
       tiedWithCaller: result.tiedWithCaller,
+      lowestOtherIds: result.lowestOtherIds,
       milestoneHitPlayerIds,
     });
 

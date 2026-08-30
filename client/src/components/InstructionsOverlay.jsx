@@ -143,10 +143,14 @@ export default function InstructionsOverlay({ onClose }) {
               <strong>You're strictly lowest</strong> &mdash; you add 0, everyone else adds their hand value.
             </li>
             <li>
-              <strong>Someone ties you</strong> &mdash; they add 0, you add your own value like a normal non-winner.
+              <strong>Someone ties you for lowest</strong> &mdash; a push, like tying the dealer: neither of you adds
+              anything, but anyone else at the table still adds their own value as normal.
             </li>
             <li>
-              <strong>Someone beats you</strong> &mdash; wrong call! You add a flat 30-point penalty instead.
+              <strong>Someone beats you</strong> &mdash; wrong call! You add a flat 30-point penalty instead of your
+              hand value. Only whoever has the single lowest hand adds nothing (they've effectively won the round for
+              you); everyone else who merely had a lower hand than you &mdash; without being the overall lowest &mdash;
+              still adds their own value.
             </li>
           </ul>
         </section>

@@ -136,19 +136,57 @@ test('resolveCall: a tie for lowest is a push - neither the caller nor the tying
   assert.deepEqual(result.tiedWithCaller, ['b']);
 });
 
-test('resolveCall: someone strictly lower makes it a wrong call', () => {
+test('resolveCall: someone strictly lower makes it a wrong call - only the overall lowest adds nothing', () => {
   const byId = cardsById();
   const players = [
     { id: 'a', hand: [byId['4S']] }, // caller, value 4
-    { id: 'b', hand: [byId['AS']] }, // value 1, beats caller
-    { id: 'c', hand: [byId['9S']] }, // value 9
+    { id: 'b', hand: [byId['AS']] }, // value 1, the overall lowest - adds nothing
+    { id: 'c', hand: [byId['9S']] }, // value 9, higher than caller - adds own value
   ];
   const result = resolveCall(players, 'a');
   assert.equal(result.outcome, 'wrong_call');
   assert.equal(result.deltas.a, 30); // flat 30 penalty, not hand value + 30
-  assert.equal(result.deltas.b, 1);
+  assert.equal(result.deltas.b, 0); // b is the single lowest hand - wins the round, adds nothing
   assert.equal(result.deltas.c, 9);
   assert.equal(result.nextStarterId, 'b');
+  assert.deepEqual(result.lowestOtherIds, ['b']);
+});
+
+test('resolveCall: wrong call - beating the caller isn\'t enough, only the overall lowest is exempt', () => {
+  const byId = cardsById();
+  // Caller has 3; one opponent has 2 (beats the caller but isn't the
+  // overall lowest) and the other has 1 (the overall lowest). Only the
+  // 1-value player should add nothing - the 2-value player still adds 2
+  // even though they also beat the caller.
+  const players = [
+    { id: 'a', hand: [byId['3S']] }, // caller, value 3
+    { id: 'b', hand: [byId['2S']] }, // value 2, beats caller but not the lowest
+    { id: 'c', hand: [byId['AS']] }, // value 1, the overall lowest
+  ];
+  const result = resolveCall(players, 'a');
+  assert.equal(result.outcome, 'wrong_call');
+  assert.equal(result.deltas.a, 30);
+  assert.equal(result.deltas.b, 2); // still adds own value - not the overall lowest
+  assert.equal(result.deltas.c, 0); // the sole lowest hand - adds nothing
+  assert.equal(result.nextStarterId, 'c');
+  assert.deepEqual(result.lowestOtherIds, ['c']);
+});
+
+test('resolveCall: wrong call with two non-callers tied for the overall lowest - both add nothing', () => {
+  const byId = cardsById();
+  const players = [
+    { id: 'a', hand: [byId['5S']] }, // caller, value 5
+    { id: 'b', hand: [byId['AS']] }, // value 1, tied for lowest
+    { id: 'c', hand: [byId['AH']] }, // value 1, tied for lowest
+    { id: 'd', hand: [byId['3S']] }, // value 3, beats caller but not the lowest
+  ];
+  const result = resolveCall(players, 'a');
+  assert.equal(result.outcome, 'wrong_call');
+  assert.equal(result.deltas.a, 30);
+  assert.equal(result.deltas.b, 0);
+  assert.equal(result.deltas.c, 0);
+  assert.equal(result.deltas.d, 3);
+  assert.deepEqual(new Set(result.lowestOtherIds), new Set(['b', 'c']));
 });
 
 test('call() applies exact-multiple-of-50 rebate', () => {

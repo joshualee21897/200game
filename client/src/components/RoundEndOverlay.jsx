@@ -19,7 +19,9 @@ function outcomeText(result, room) {
     const tierNames = result.tiedWithCaller.map((id) => nameFor(room, id));
     return `${callerName} called and tied with ${listNames(tierNames)} — a push, no points for either!`;
   }
-  return `${callerName} called wrongly — 30 point penalty!`;
+  const lowestNames = (result.lowestOtherIds || []).map((id) => nameFor(room, id));
+  const verb = lowestNames.length > 1 ? 'win' : 'wins';
+  return `${callerName} called wrongly — 30 point penalty! ${listNames(lowestNames)} ${verb} the round with the lowest hand and adds nothing.`;
 }
 
 function ClownBanner({ name }) {
