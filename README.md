@@ -38,10 +38,10 @@ This builds the React client (`vite build`) and then runs only the Express serve
 
 1. One player creates a room and shares the 5-letter room code.
 2. 2-10 players join by typing a display name and the room code (no accounts) - or the host can click "Add Bot" in the waiting room to fill empty seats with computer players (handy for solo/practice games or short-handed groups), picking Easy/Medium/Hard beforehand and removing one with the ✕ if added by mistake. Bots play automatically: they meld/discard, choose a draw source, and call, each with a short "thinking" delay.
-3. The host starts the game once at least 2 players are seated. Everyone throws rock-paper-scissors to decide who opens round 1 (ties and 3+-way splits just re-throw among whoever's still tied for the win).
+3. The host picks a "Bust at" score (50, 100, 150, or default 200) for a shorter or longer game, then starts once at least 2 players are seated. Everyone throws rock-paper-scissors to decide who opens round 1 (ties and 3+-way splits just re-throw among whoever's still tied for the win).
 4. Each turn: discard a single card or a valid meld (pair/triple/quad of one rank, or a same-suit run of 3+ consecutive cards — Ace is low, Jokers can't join a meld) — including your entire hand if it's all one valid meld, since the draw right after always brings you back to at least 1 card — then draw one card from the draw pile or the top of the discard pile.
 5. If your hand value is 5 or less, you may call instead of discarding. All hands are revealed and scored per the round-resolution rules below.
-6. Running totals persist across rounds; landing exactly on 50/100/150/200 rebates 50 points. Going over 200 (without landing exactly on it) ends the game for that player. Whoever had the lowest hand value at the last reveal opens the next round (see below).
+6. Running totals persist across rounds; landing exactly on a multiple of 50 up to the bust score rebates 50 points. Going over the bust score (without landing exactly on it) ends the game for that player — every player who busts in the same round is called out, not just one. Whoever had the lowest hand value at the last reveal opens the next round (see below).
 7. Each turn has a 30-second clock; if it expires the server auto-plays (discards a card and/or draws) so the game never stalls. The rock-paper-scissors throw-off itself isn't timed.
 
 ### Reconnecting
@@ -58,7 +58,8 @@ A few points in the brief were open to interpretation; here's what was implement
 - **Next round's starter.** The brief says "the winner of each round starts the next round," but doesn't say who starts after a tie or a wrong call (no one "wins" in those cases). Implemented as: the caller starts next whenever their call succeeds (including a tie for lowest — ties go to the caller), otherwise whoever was strictly lowest starts next.
 - **Runs and Ace ordering.** Ace is always low (matching its 1-point value), so `A-2-3` is a valid run but `Q-K-A` is not.
 - **Turn timer scope.** The 30-second clock covers a full turn (discard *and* draw), not each action separately — it resets only when the turn passes to the next player.
-- **Game end / overall winner.** The brief specifies the busted player "instantly loses" but doesn't name an overall winner among a 3+ player table. The UI reports the busted player and shows final standings, with the lowest remaining score highlighted as the effective winner.
+- **Game end / overall winner.** The brief specifies the busted player "instantly loses" but doesn't name an overall winner among a 3+ player table. The UI shows every player's final score (busted ones marked accordingly - more than one player can bust in the same round), with the lowest remaining score highlighted as the effective winner.
+- **Configurable bust score.** Not in the brief, but added for shorter games: the host picks 50/100/150/200 before starting instead of always playing to 200. Milestone rebates (every multiple of 50) scale with whatever threshold is chosen.
 - **Players supported.** The brief's overview says "4-5 player" but the setup section explicitly says "2-5 players supported" — implemented as 2-10, with two decks shuffled together once a table has 6+ players.
 
 ## What's not built

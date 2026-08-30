@@ -29,7 +29,7 @@ export default function InstructionsOverlay({ onClose }) {
             &times;
           </button>
         </div>
-        <p className="subtitle">Keep your hand value low. Call when you're confident. Don't bust past 200.</p>
+        <p className="subtitle">Keep your hand value low. Call when you're confident. Don't bust past the game's target score.</p>
 
         <section>
           <h3>Card values</h3>
@@ -169,8 +169,9 @@ export default function InstructionsOverlay({ onClose }) {
             <div className="demo-scale-step demo-scale-bust">201+</div>
           </div>
           <p className="demo-caption">
-            Landing exactly on 50/100/150/200 rebates 50 points off your total. Going over 200 without landing on it
-            busts you &mdash; game over, lowest remaining score wins.
+            Landing exactly on a multiple of 50 (up to the bust score) rebates 50 points off your total. Going over the
+            bust score without landing on it busts you &mdash; game over, lowest remaining score wins. Shown here for
+            the default 200-point game; the host can pick a shorter game (bust at 50, 100, or 150) before starting.
           </p>
         </section>
       </div>

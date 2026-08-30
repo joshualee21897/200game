@@ -1,11 +1,21 @@
 import Confetti from './Confetti';
 
+function listNames(names) {
+  if (names.length <= 1) return names[0] || '';
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
 export default function GameEndOverlay({ game, room, playerId }) {
   const result = game.finalResult;
-  const bustedName = room.seats.find((s) => s.id === result.bustedPlayerId)?.name;
+  const bustedIds = result.bustedPlayerIds || [];
+  const bustedNames = bustedIds.map((id) => room.seats.find((s) => s.id === id)?.name).filter(Boolean);
   const winnerName = room.seats.find((s) => s.id === result.winnerId)?.name;
   const isWinner = playerId === result.winnerId;
-  const isBusted = playerId === result.bustedPlayerId;
+  const isBusted = bustedIds.includes(playerId);
+
+  const bustBeVerb = bustedNames.length > 1 ? 'are' : 'is';
+
+  let rank = 0;
 
   return (
     <div className="overlay">
@@ -25,8 +35,8 @@ export default function GameEndOverlay({ game, room, playerId }) {
         )}
 
         <p className="outcome-line">
-          {bustedName} busted past 200 and is out.
-          {winnerName && ` ${winnerName} finishes with the lowest score.`}
+          {listNames(bustedNames)} busted past {game.bustThreshold} and {bustBeVerb} out.
+          {winnerName ? ` ${winnerName} finishes with the lowest score.` : ' No one is left standing!'}
         </p>
 
         <table className="result-table">
@@ -38,18 +48,19 @@ export default function GameEndOverlay({ game, room, playerId }) {
             </tr>
           </thead>
           <tbody>
-            {result.standings.map((s, i) => (
-              <tr key={s.id} className={s.id === playerId ? 'row-you' : ''}>
-                <td>{i + 1}</td>
-                <td>{s.name}</td>
-                <td>{s.score}</td>
-              </tr>
-            ))}
-            <tr className="row-busted">
-              <td>&mdash;</td>
-              <td>{bustedName}</td>
-              <td>busted</td>
-            </tr>
+            {result.standings.map((s) => {
+              if (!s.busted) rank += 1;
+              return (
+                <tr key={s.id} className={`${s.id === playerId ? 'row-you' : ''} ${s.busted ? 'row-busted' : ''}`}>
+                  <td>{s.busted ? '—' : rank}</td>
+                  <td>{s.name}</td>
+                  <td>
+                    {s.score}
+                    {s.busted ? ' (busted)' : ''}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
 

@@ -47,7 +47,7 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
       if (game.roundResult?.milestoneHitPlayerIds?.length > 0) playMilestone();
     }
     if (game.phase === 'game_end' && prev !== 'game_end') {
-      if (game.finalResult?.bustedPlayerId === playerId) playBust();
+      if (game.finalResult?.bustedPlayerIds?.includes(playerId)) playBust();
       else playGameWin();
     }
   }, [game.phase]);
@@ -151,6 +151,7 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
       <div className="table-header">
         <div>
           Room <strong>{room.code}</strong> &middot; Round {game.roundNumber}
+          {game.bustThreshold !== 200 && ` · Bust at ${game.bustThreshold}`}
         </div>
         <div className="table-header-right">
           {(game.phase === 'discard' || game.phase === 'draw') && (

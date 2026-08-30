@@ -247,6 +247,42 @@ button.secondary:active {
   box-shadow: 0 2px 6px rgba(30, 90, 40, 0.18);
 }
 
+.bust-threshold-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--green-light);
+  padding: 4px;
+  padding-left: 10px;
+  border-radius: 10px;
+}
+
+.bust-threshold-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  flex-shrink: 0;
+}
+
+.bust-threshold-picker button {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.bust-threshold-picker button.active {
+  background: var(--panel-bg);
+  color: var(--green-dark);
+  box-shadow: 0 2px 6px rgba(30, 90, 40, 0.18);
+}
+
 .waiting-room-actions {
   display: flex;
   flex-direction: column;

@@ -150,7 +150,7 @@ function App() {
     const res = await runAction('room:join', { name, roomCode });
     if (res) saveSession(name, res.roomCode);
   };
-  const handleStart = () => runAction('room:start', {});
+  const handleStart = (bustThreshold) => runAction('room:start', { bustThreshold });
   const handleAddBot = (difficulty) => runAction('room:addBot', { difficulty });
   const handleRemoveBot = (botId) => runAction('room:removeBot', { botId });
   const handleNextRound = () => runAction('room:nextRound', {});

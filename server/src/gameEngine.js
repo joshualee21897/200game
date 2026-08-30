@@ -8,9 +8,16 @@ const HAND_SIZE = 5;
 // draw/discard cycle to feel right, so those games are played with two
 // decks shuffled together (112 cards) instead.
 const DOUBLE_DECK_MIN_PLAYERS = 6;
+export const BUST_THRESHOLDS = [50, 100, 150, 200];
+const DEFAULT_BUST_THRESHOLD = 200;
 
-function milestoneRebate(total) {
-  if (total === 50 || total === 100 || total === 150 || total === 200) {
+// Every exact multiple of 50 up to (and including) the bust threshold
+// rebates 50 points off - e.g. a 100-point game only has milestones at 50
+// and 100; a default 200-point game keeps all four (50/100/150/200).
+// Landing exactly on the threshold itself still rebates rather than
+// busting, same as it always has.
+function milestoneRebate(total, bustThreshold) {
+  if (total > 0 && total <= bustThreshold && total % 50 === 0) {
     return total - 50;
   }
   return total;
@@ -85,11 +92,15 @@ export function resolveRpsRound(active, choices) {
 }
 
 export class Game {
-  constructor(players, { rng = Math.random } = {}) {
+  constructor(players, { rng = Math.random, bustThreshold = DEFAULT_BUST_THRESHOLD } = {}) {
     if (players.length < MIN_PLAYERS || players.length > MAX_PLAYERS) {
       throw new Error(`Game requires ${MIN_PLAYERS}-${MAX_PLAYERS} players`);
     }
+    if (!BUST_THRESHOLDS.includes(bustThreshold)) {
+      throw new Error(`Bust threshold must be one of ${BUST_THRESHOLDS.join(', ')}`);
+    }
     this.rng = rng;
+    this.bustThreshold = bustThreshold;
     this.players = players.map((p) => ({
       id: p.id,
       name: p.name,
@@ -289,16 +300,20 @@ export class Game {
     if (value > 5) throw new Error('Hand value must be 5 or less to call');
 
     const result = resolveCall(this.players, playerId);
-    let bustedPlayerId = null;
     const milestoneHitPlayerIds = [];
     for (const p of this.players) {
       const delta = result.deltas[p.id];
       const preRebate = p.score + delta;
-      const total = milestoneRebate(preRebate);
+      const total = milestoneRebate(preRebate, this.bustThreshold);
       if (total !== preRebate) milestoneHitPlayerIds.push(p.id);
       p.score = total;
-      if (total >= 201 && !bustedPlayerId) bustedPlayerId = p.id;
     }
+    // Computed as a separate pass (not inline above) so every player's
+    // score is finalized first - more than one player can cross the
+    // threshold in the same round (e.g. several non-callers each adding
+    // their own value on a wrong call), and all of them should show as
+    // busted, not just whoever happened to be iterated first.
+    const bustedPlayerIds = this.players.filter((p) => p.score > this.bustThreshold).map((p) => p.id);
 
     this.roundResult = {
       ...result,
@@ -322,15 +337,20 @@ export class Game {
       milestoneHitPlayerIds,
     });
 
-    if (bustedPlayerId) {
+    if (bustedPlayerIds.length > 0) {
+      const bustedSet = new Set(bustedPlayerIds);
+      // Ascending by score ranks everyone at once - busted players always
+      // sort to the bottom on their own since a bust score is by
+      // definition above the threshold every non-busted score is under.
       const standings = this.players
-        .filter((p) => p.id !== bustedPlayerId)
         .slice()
-        .sort((a, b) => a.score - b.score);
+        .sort((a, b) => a.score - b.score)
+        .map((p) => ({ id: p.id, name: p.name, score: p.score, busted: bustedSet.has(p.id) }));
+      const winner = standings.find((p) => !p.busted);
       this.finalResult = {
-        bustedPlayerId,
-        winnerId: standings.length ? standings[0].id : null,
-        standings: standings.map((p) => ({ id: p.id, name: p.name, score: p.score })),
+        bustedPlayerIds,
+        winnerId: winner ? winner.id : null,
+        standings,
       };
       this.phase = 'game_end';
     } else {
@@ -370,6 +390,7 @@ export class Game {
   getState() {
     return {
       roundNumber: this.roundNumber,
+      bustThreshold: this.bustThreshold,
       phase: this.phase,
       currentPlayerId: this.phase === 'rps' ? null : this.players[this.turnIndex]?.id ?? null,
       turnDeadline: this.turnDeadline,

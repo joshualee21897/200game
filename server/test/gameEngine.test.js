@@ -232,8 +232,75 @@ test('call() ends the game when a player busts past 200 (no exact milestone)', (
   opponent.score = 195; // 195 + 9 = 204 -> bust, not an exact milestone
   const state = game.call(caller.id);
   assert.equal(state.phase, 'game_end');
-  assert.equal(state.finalResult.bustedPlayerId, opponent.id);
+  assert.deepEqual(state.finalResult.bustedPlayerIds, [opponent.id]);
   assert.equal(state.finalResult.winnerId, caller.id);
+  assert.deepEqual(
+    state.finalResult.standings.map((p) => [p.id, p.score, p.busted]),
+    [
+      [caller.id, 0, false], // caller won this round (strictly lowest), adds 0
+      [opponent.id, 204, true],
+    ]
+  );
+});
+
+test('call() flags every player who busts in the same round, not just the first one', () => {
+  const byId = cardsById();
+  const game = new Game(makePlayers(4), { rng: makeRng(9) });
+  game.startRound();
+  const caller = game.currentPlayer;
+  const [b, c, d] = game.players.filter((p) => p.id !== caller.id);
+  caller.hand = [byId['5S']]; // caller, value 5 - wrong call incoming
+  b.hand = [byId['AS']]; // value 1 - the overall lowest, exempt
+  c.hand = [byId['4S']]; // value 4 - beats caller but not the lowest, adds 4
+  d.hand = [byId['3S']]; // value 3 - beats caller but not the lowest, adds 3
+  c.score = 197; // 197 + 4 = 201 -> busts
+  d.score = 198; // 198 + 3 = 201 -> busts too, same round
+  const state = game.call(caller.id);
+  assert.equal(state.phase, 'game_end');
+  assert.deepEqual(new Set(state.finalResult.bustedPlayerIds), new Set([c.id, d.id]));
+  assert.equal(state.finalResult.winnerId, b.id); // lowest non-busted score wins
+  const byIdInStandings = Object.fromEntries(state.finalResult.standings.map((p) => [p.id, p]));
+  assert.equal(byIdInStandings[c.id].busted, true);
+  assert.equal(byIdInStandings[d.id].busted, true);
+  assert.equal(byIdInStandings[b.id].busted, false);
+  assert.equal(byIdInStandings[caller.id].busted, false);
+  // Standings include every player, ascending by score.
+  assert.equal(state.finalResult.standings.length, 4);
+});
+
+test('bustThreshold defaults to 200 and rejects an unsupported value', () => {
+  const game = new Game(makePlayers(2), { rng: makeRng(1) });
+  assert.equal(game.bustThreshold, 200);
+  assert.throws(() => new Game(makePlayers(2), { rng: makeRng(1), bustThreshold: 75 }));
+});
+
+test('a shorter game (bustThreshold 50) rebates at 50 and busts just past it', () => {
+  const byId = cardsById();
+  const game = new Game(makePlayers(2), { rng: makeRng(9), bustThreshold: 50 });
+  game.startRound();
+  const caller = game.currentPlayer;
+  const opponent = game.players.find((p) => p.id !== caller.id);
+  caller.hand = [byId['AS']]; // value 1, wins
+  opponent.hand = [byId['9S']]; // value 9
+  opponent.score = 45; // 45 + 9 = 54 -> busts past the 50-point threshold
+  const state = game.call(caller.id);
+  assert.equal(state.phase, 'game_end');
+  assert.deepEqual(state.finalResult.bustedPlayerIds, [opponent.id]);
+});
+
+test('a shorter game (bustThreshold 50) still rebates on an exact landing', () => {
+  const byId = cardsById();
+  const game = new Game(makePlayers(2), { rng: makeRng(9), bustThreshold: 50 });
+  game.startRound();
+  const caller = game.currentPlayer;
+  const opponent = game.players.find((p) => p.id !== caller.id);
+  caller.hand = [byId['AS']]; // value 1, wins
+  opponent.hand = [byId['9S']]; // value 9
+  opponent.score = 41; // 41 + 9 = 50 -> exact landing, rebates to 0 instead of busting
+  const state = game.call(caller.id);
+  assert.equal(state.phase, 'round_end');
+  const opp = state.players.find((p) => p.id === opponent.id);
+  assert.equal(opp.score, 0);
 });
 
 test('exact landing on 200 rebates to 150 instead of busting', () => {

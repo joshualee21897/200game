@@ -224,11 +224,11 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('room:start', (_payload, cb) => {
+  socket.on('room:start', ({ bustThreshold } = {}, cb) => {
     try {
       const room = roomManager.getRoom(socket.data.roomCode);
       if (!room) throw new Error('Not in a room');
-      const started = roomManager.startGame(room.code, socket.data.playerId);
+      const started = roomManager.startGame(room.code, socket.data.playerId, { bustThreshold });
       cb?.({ ok: true });
       broadcastState(started);
       scheduleTurnTimer(started);
