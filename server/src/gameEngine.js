@@ -90,6 +90,7 @@ export class Game {
       hand: [],
       score: 0,
       connected: true,
+      isBot: !!p.isBot,
     }));
     this.roundNumber = 0;
     this.drawPile = [];
@@ -363,6 +364,7 @@ export class Game {
         name: p.name,
         score: p.score,
         connected: p.connected,
+        isBot: p.isBot,
         handCount: p.hand.length,
       })),
       roundResult: this.roundResult,

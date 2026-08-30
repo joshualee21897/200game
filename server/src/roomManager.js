@@ -5,6 +5,7 @@ const ROOM_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no ambiguous 0/O/
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 10;
 const RECONNECT_GRACE_MS = 2 * 60 * 1000;
+const BOT_NAME_POOL = ['Ace', 'Rusty', 'Circuit', 'Chip', 'Pixel', 'Nova', 'Domino', 'Cash', 'Dealer', 'Vega'];
 
 function genRoomCode(existingCodes) {
   let code;
@@ -65,6 +66,35 @@ export class RoomManager {
     return { room, playerId, reconnected: false };
   }
 
+  /**
+   * Adds a computer-controlled seat so a solo player (or a group short a
+   * few friends) can still fill a table. Bots are seats like any other -
+   * same MAX_PLAYERS cap, same turn order - just flagged `isBot: true` so
+   * the server drives their turns automatically (see index.js) instead of
+   * waiting on a socket that will never send one.
+   */
+  addBot(code, requesterId) {
+    const room = this.rooms.get(code);
+    if (!room) throw new Error('Room not found');
+    if (room.hostId !== requesterId) throw new Error('Only the host can add a bot');
+    if (room.status !== 'lobby') throw new Error('Game already in progress');
+    if (room.seats.length >= MAX_PLAYERS) throw new Error('Room is full');
+
+    const taken = new Set(room.seats.map((s) => s.name.toLowerCase()));
+    let name = BOT_NAME_POOL.find((n) => !taken.has(n.toLowerCase()));
+    if (!name) {
+      let suffix = 2;
+      do {
+        name = `Bot ${suffix}`;
+        suffix += 1;
+      } while (taken.has(name.toLowerCase()));
+    }
+
+    const playerId = crypto.randomUUID();
+    room.seats.push({ id: playerId, name, connected: true, isBot: true });
+    return { room, playerId };
+  }
+
   startGame(code, requesterId, options = {}) {
     const room = this.rooms.get(code);
     if (!room) throw new Error('Room not found');
@@ -73,7 +103,7 @@ export class RoomManager {
     if (room.seats.length < MIN_PLAYERS) throw new Error(`Need at least ${MIN_PLAYERS} players`);
     if (room.seats.length > MAX_PLAYERS) throw new Error(`No more than ${MAX_PLAYERS} players`);
 
-    room.game = new Game(room.seats.map((s) => ({ id: s.id, name: s.name })), options);
+    room.game = new Game(room.seats.map((s) => ({ id: s.id, name: s.name, isBot: !!s.isBot })), options);
     room.status = 'in_game';
     // Game starts itself in a 'rps' phase (throw-off to decide who opens
     // round 1) and calls startRound() once that resolves - see gameEngine.js.
@@ -132,7 +162,7 @@ export class RoomManager {
       code: room.code,
       hostId: room.hostId,
       status: room.status,
-      seats: room.seats.map((s) => ({ id: s.id, name: s.name, connected: s.connected })),
+      seats: room.seats.map((s) => ({ id: s.id, name: s.name, connected: s.connected, isBot: !!s.isBot })),
     };
   }
 }

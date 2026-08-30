@@ -8,6 +8,10 @@ function nameFor(room, id) {
   return room.seats.find((s) => s.id === id)?.name || 'Someone';
 }
 
+function isBotId(room, id) {
+  return room.seats.find((s) => s.id === id)?.isBot === true;
+}
+
 export default function RpsPanel({ room, game, playerId, onChoose, error }) {
   const rps = game.rps;
   const isActive = rps.active.includes(playerId);
@@ -28,6 +32,7 @@ export default function RpsPanel({ room, game, playerId, onChoose, error }) {
       <div className="rps-players">
         {rps.active.map((id) => (
           <div key={id} className={`rps-player-chip ${rps.submitted.includes(id) ? 'rps-player-ready' : ''}`}>
+            {isBotId(room, id) && '🤖 '}
             {nameFor(room, id)}
             {id === playerId && <span className="badge badge-you">You</span>}
             <span className="rps-player-status">{rps.submitted.includes(id) ? 'Locked in' : 'Choosing…'}</span>

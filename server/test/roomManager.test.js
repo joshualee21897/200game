@@ -24,6 +24,51 @@ test('rejects joining a full room (max 10)', () => {
   assert.throws(() => rm.joinRoom(room.code, 'P11'));
 });
 
+test('addBot: only the host can add a bot, and it fills a seat with isBot set', () => {
+  const rm = new RoomManager();
+  const { room, playerId: hostId } = rm.createRoom('Alice');
+  const { playerId: bobId } = rm.joinRoom(room.code, 'Bob');
+  assert.throws(() => rm.addBot(room.code, bobId)); // not host
+
+  const { playerId: botId } = rm.addBot(room.code, hostId);
+  const stored = rm.getRoom(room.code);
+  assert.equal(stored.seats.length, 3);
+  const botSeat = stored.seats.find((s) => s.id === botId);
+  assert.equal(botSeat.isBot, true);
+  assert.equal(botSeat.connected, true);
+});
+
+test('addBot: lets a solo host reach the 2-player minimum and start', () => {
+  const rm = new RoomManager();
+  const { room, playerId: hostId } = rm.createRoom('Alice');
+  assert.throws(() => rm.startGame(room.code, hostId)); // only 1 player
+  rm.addBot(room.code, hostId);
+  const started = rm.startGame(room.code, hostId, { rng: () => 0.42 });
+  assert.equal(started.status, 'in_game');
+  assert.equal(started.game.players.filter((p) => p.isBot).length, 1);
+});
+
+test('addBot: gives each bot a distinct name, never colliding with a human or an earlier bot', () => {
+  const rm = new RoomManager();
+  const { room, playerId: hostId } = rm.createRoom('Alice');
+  const names = new Set(['alice']);
+  for (let i = 0; i < 5; i++) {
+    const { playerId } = rm.addBot(room.code, hostId);
+    const seat = rm.getRoom(room.code).seats.find((s) => s.id === playerId);
+    const lower = seat.name.toLowerCase();
+    assert.equal(names.has(lower), false);
+    names.add(lower);
+  }
+});
+
+test('addBot: rejects once the room is full', () => {
+  const rm = new RoomManager();
+  const { room, playerId: hostId } = rm.createRoom('Alice');
+  for (let i = 0; i < 9; i++) rm.addBot(room.code, hostId);
+  assert.equal(rm.getRoom(room.code).seats.length, 10);
+  assert.throws(() => rm.addBot(room.code, hostId));
+});
+
 test('only host can start; requires at least 2 players', () => {
   const rm = new RoomManager();
   const { room, playerId: hostId } = rm.createRoom('Alice');

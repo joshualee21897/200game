@@ -103,6 +103,7 @@ function App() {
     if (res) saveSession(name, res.roomCode);
   };
   const handleStart = () => runAction('room:start', {});
+  const handleAddBot = () => runAction('room:addBot', {});
   const handleNextRound = () => runAction('room:nextRound', {});
   const handleDiscard = (cardIds) => runAction('game:discard', { cardIds });
   const handleDraw = (source, cardId) => runAction('game:draw', { source, cardId });
@@ -130,7 +131,14 @@ function App() {
   if (state.room.status === 'lobby') {
     return (
       <div className="app-shell">
-        <WaitingRoom room={state.room} playerId={state.yourPlayerId} onStart={handleStart} error={error} busy={busy} />
+        <WaitingRoom
+          room={state.room}
+          playerId={state.yourPlayerId}
+          onStart={handleStart}
+          onAddBot={handleAddBot}
+          error={error}
+          busy={busy}
+        />
       </div>
     );
   }

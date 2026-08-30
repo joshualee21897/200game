@@ -129,6 +129,7 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
         {game.players.map((p) => (
           <div key={p.id} className={`score-chip ${p.id === game.currentPlayerId ? 'score-chip-active' : ''}`}>
             <span className="score-name">
+              {p.isBot && '🤖 '}
               {p.name}
               {!p.connected && ' (offline)'}
             </span>
