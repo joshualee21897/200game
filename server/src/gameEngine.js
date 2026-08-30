@@ -18,11 +18,13 @@ function milestoneRebate(total) {
 
 /**
  * Resolves a call per the brief:
- *  - caller strictly lowest, or tied with someone else for lowest -> caller
- *    made a good call either way, adds 0; everyone else adds their own
- *    value (including anyone who tied the caller - the tie goes to the
- *    caller since they're the one who called). The caller keeps the deal
- *    for the next round in both cases.
+ *  - caller strictly lowest -> clean win: caller adds 0, everyone else adds
+ *    their own value.
+ *  - caller ties with someone else for lowest (no one strictly below) ->
+ *    a push, like tying the dealer in blackjack: neither the caller nor
+ *    the tied player(s) add anything, but anyone else at the table still
+ *    adds their own value as normal. The caller still keeps the deal for
+ *    the next round either way (win or push).
  *  - someone strictly beats the caller -> wrong call: caller adds a flat 30
  *    penalty only (not their hand value on top of it), everyone else adds
  *    their own value as normal; whoever was strictly lowest opens next.
@@ -44,9 +46,9 @@ export function resolveCall(players, callerId) {
     const minValue = Math.min(...others.map((v) => v.value));
     nextStarterId = others.find((v) => v.value === minValue).id;
   } else {
-    outcome = 'win';
+    outcome = tiedWithCaller.length > 0 ? 'push' : 'win';
     deltas[callerId] = 0;
-    for (const v of others) deltas[v.id] = v.value;
+    for (const v of others) deltas[v.id] = tiedWithCaller.includes(v.id) ? 0 : v.value;
     nextStarterId = callerId;
   }
 

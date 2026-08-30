@@ -1,41 +1,4 @@
-import { useMemo } from 'react';
-
-const CONFETTI_COLORS = ['#ffd257', '#58b95c', '#4fb0e0', '#f2665f', '#e0a934'];
-
-function ConfettiLayer() {
-  const pieces = useMemo(
-    () =>
-      Array.from({ length: 70 }, (_, i) => ({
-        id: i,
-        left: Math.random() * 100,
-        color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-        delay: Math.random() * 0.7,
-        duration: 2.2 + Math.random() * 1.4,
-        drift: (Math.random() - 0.5) * 140,
-        rotate: 360 + Math.random() * 360,
-      })),
-    []
-  );
-
-  return (
-    <div className="confetti-layer" aria-hidden="true">
-      {pieces.map((p) => (
-        <span
-          key={p.id}
-          className="confetti-piece"
-          style={{
-            left: `${p.left}%`,
-            backgroundColor: p.color,
-            animationDelay: `${p.delay}s`,
-            animationDuration: `${p.duration}s`,
-            '--drift': `${p.drift}px`,
-            '--rotate': `${p.rotate}deg`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
+import Confetti from './Confetti';
 
 export default function GameEndOverlay({ game, room, playerId }) {
   const result = game.finalResult;
@@ -46,7 +9,7 @@ export default function GameEndOverlay({ game, room, playerId }) {
 
   return (
     <div className="overlay">
-      {isWinner && <ConfettiLayer />}
+      {isWinner && <Confetti count={70} />}
       <div className="overlay-panel">
         <h2>Game Over</h2>
 

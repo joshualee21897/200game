@@ -1,4 +1,5 @@
 import Card from './Card';
+import Confetti from './Confetti';
 
 function nameFor(room, id) {
   return room.seats.find((s) => s.id === id)?.name || 'Someone';
@@ -12,11 +13,11 @@ function listNames(names) {
 function outcomeText(result, room) {
   const callerName = nameFor(room, result.callerId);
   if (result.outcome === 'win') {
-    if (result.tiedWithCaller?.length > 0) {
-      const tierNames = result.tiedWithCaller.map((id) => nameFor(room, id));
-      return `${callerName} called and won — tied with ${listNames(tierNames)}, but the call stands!`;
-    }
     return `${callerName} won the round!`;
+  }
+  if (result.outcome === 'push') {
+    const tierNames = result.tiedWithCaller.map((id) => nameFor(room, id));
+    return `${callerName} called and tied with ${listNames(tierNames)} — a push, no points for either!`;
   }
   return `${callerName} called wrongly — 30 point penalty!`;
 }
@@ -51,6 +52,7 @@ export default function RoundEndOverlay({ game, room, playerId, onNextRound }) {
 
   return (
     <div className="overlay">
+      {result.outcome === 'win' && <Confetti count={40} />}
       <div className="overlay-panel">
         <h2>Round {game.roundNumber} Result</h2>
         {result.outcome === 'wrong_call' && <ClownBanner name={nameFor(room, result.callerId)} />}

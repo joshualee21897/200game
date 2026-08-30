@@ -120,17 +120,17 @@ test('resolveCall: caller strictly lowest wins', () => {
   assert.equal(result.nextStarterId, 'a');
 });
 
-test('resolveCall: a tie for lowest still counts as a win for the caller', () => {
+test('resolveCall: a tie for lowest is a push - neither the caller nor the tying player scores', () => {
   const byId = cardsById();
   const players = [
     { id: 'a', hand: [byId['2S']] }, // caller, value 2
     { id: 'b', hand: [byId['2H']] }, // ties caller, value 2
-    { id: 'c', hand: [byId['9S']] }, // value 9
+    { id: 'c', hand: [byId['9S']] }, // value 9, not part of the tie
   ];
   const result = resolveCall(players, 'a');
-  assert.equal(result.outcome, 'win');
+  assert.equal(result.outcome, 'push');
   assert.equal(result.deltas.a, 0);
-  assert.equal(result.deltas.b, 2);
+  assert.equal(result.deltas.b, 0);
   assert.equal(result.deltas.c, 9);
   assert.equal(result.nextStarterId, 'a');
   assert.deepEqual(result.tiedWithCaller, ['b']);
