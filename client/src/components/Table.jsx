@@ -18,6 +18,7 @@ import {
   playWrongCall,
   playMilestone,
   playBust,
+  playYourTurn,
 } from '../sound';
 
 export default function Table({ room, game, hand, playerId, onDiscard, onDraw, onCall, onNextRound, onRpsChoice, error }) {
@@ -68,6 +69,7 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
     if (!isMyTurnNow) return;
     if (prevPlayer === game.currentPlayerId && prevRound === game.roundNumber) return;
 
+    playYourTurn();
     setShowTurnPopup(true);
     const t = setTimeout(() => setShowTurnPopup(false), 1600);
     return () => clearTimeout(t);

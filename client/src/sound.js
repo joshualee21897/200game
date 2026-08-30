@@ -108,6 +108,17 @@ export function playChoice() {
   play((ctx, t) => noiseBurst(ctx, t, { duration: 0.03, filterFreq: 3000, Q: 1.8, gain: 0.09 }));
 }
 
+export function playYourTurn() {
+  // A bright two-note "ding-ding" notification chime - louder and more
+  // attention-grabbing than the card sounds, since this one needs to cut
+  // through even if you're not looking at the screen (or the tab is in
+  // the background).
+  play((ctx, t) => {
+    tone(ctx, t, { freq: 880, duration: 0.16, gain: 0.18 });
+    tone(ctx, t + 0.14, { freq: 1108.73, duration: 0.24, gain: 0.18 });
+  });
+}
+
 export function playRoundEnd() {
   play((ctx, t) => {
     noiseBurst(ctx, t, { duration: 0.07, filterFreq: 2500, Q: 0.8, gain: 0.13 }); // hands flipping over
