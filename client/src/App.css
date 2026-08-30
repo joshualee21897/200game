@@ -369,6 +369,60 @@ button.secondary:active {
   box-shadow: 0 4px 10px rgba(20, 60, 20, 0.15);
 }
 
+.table-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.history-button {
+  width: 2.2em;
+  height: 2.2em;
+  font-size: 1em;
+  flex-shrink: 0;
+}
+
+.history-table-wrap {
+  overflow-x: auto;
+  margin: 16px 0;
+}
+
+.history-table {
+  margin: 0;
+}
+
+.history-table th,
+.history-table td {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.history-table th:nth-child(-n + 2),
+.history-table td:nth-child(-n + 2) {
+  text-align: left;
+}
+
+.history-outcome {
+  font-size: 0.75em;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.history-delta-add {
+  font-weight: 800;
+  color: var(--red-dark);
+}
+
+.history-delta-zero {
+  font-weight: 800;
+  color: var(--green-dark);
+}
+
+.history-score-after {
+  font-size: 0.75em;
+  color: var(--ink-soft);
+}
+
 .timer {
   font-variant-numeric: tabular-nums;
   font-weight: 800;
@@ -765,7 +819,7 @@ button.secondary:active {
   align-items: center;
   justify-content: center;
   padding: 16px;
-  z-index: 10;
+  z-index: 20;
 }
 
 .overlay-panel {

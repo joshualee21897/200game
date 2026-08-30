@@ -114,6 +114,7 @@ export class Game {
       winnerId: null,
     };
     this.roundResult = null;
+    this.roundHistory = [];
     this.finalResult = null;
     this.turnDeadline = null;
   }
@@ -300,6 +301,19 @@ export class Game {
       scoresAfter: Object.fromEntries(this.players.map((p) => [p.id, p.score])),
       milestoneHitPlayerIds,
     };
+    // A lighter-weight record (no actual hands) kept for every round so far
+    // this game, for the "history" view - unlike roundResult, which the
+    // client only shows once and then discards on the next round.
+    this.roundHistory.push({
+      roundNumber: this.roundNumber,
+      callerId: playerId,
+      outcome: result.outcome,
+      values: result.values,
+      deltas: result.deltas,
+      scoresAfter: this.roundResult.scoresAfter,
+      tiedWithCaller: result.tiedWithCaller,
+      milestoneHitPlayerIds,
+    });
 
     if (bustedPlayerId) {
       const standings = this.players
@@ -370,6 +384,7 @@ export class Game {
         handCount: p.hand.length,
       })),
       roundResult: this.roundResult,
+      roundHistory: this.roundHistory,
       finalResult: this.finalResult,
     };
   }

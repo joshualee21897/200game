@@ -5,6 +5,7 @@ import RoundEndOverlay from './RoundEndOverlay';
 import GameEndOverlay from './GameEndOverlay';
 import RpsPanel from './RpsPanel';
 import InstructionsOverlay from './InstructionsOverlay';
+import ScoreHistoryOverlay from './ScoreHistoryOverlay';
 import { handValue } from '../gameRules';
 import {
   isMuted,
@@ -22,6 +23,7 @@ import {
 export default function Table({ room, game, hand, playerId, onDiscard, onDraw, onCall, onNextRound, onRpsChoice, error }) {
   const [selected, setSelected] = useState(() => new Set());
   const [showInstructions, setShowInstructions] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [muted, setMutedState] = useState(() => isMuted());
   const [showTurnPopup, setShowTurnPopup] = useState(false);
   const prevPhaseRef = useRef(game.phase);
@@ -148,13 +150,25 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
         <div>
           Room <strong>{room.code}</strong> &middot; Round {game.roundNumber}
         </div>
-        {(game.phase === 'discard' || game.phase === 'draw') && (
-          <div className="turn-banner">
-            {isMyTurn ? 'Your turn' : `${room.seats.find((s) => s.id === game.currentPlayerId)?.name}'s turn`} &middot;{' '}
-            <Timer deadline={game.turnDeadline} />
-          </div>
-        )}
+        <div className="table-header-right">
+          {(game.phase === 'discard' || game.phase === 'draw') && (
+            <div className="turn-banner">
+              {isMyTurn ? 'Your turn' : `${room.seats.find((s) => s.id === game.currentPlayerId)?.name}'s turn`} &middot;{' '}
+              <Timer deadline={game.turnDeadline} />
+            </div>
+          )}
+          <button
+            type="button"
+            className="icon-button history-button"
+            onClick={() => setShowHistory(true)}
+            title="Score history"
+          >
+            📜
+          </button>
+        </div>
       </div>
+
+      {showHistory && <ScoreHistoryOverlay game={game} room={room} onClose={() => setShowHistory(false)} />}
 
       <div className="scoreboard">
         {game.players.map((p) => (

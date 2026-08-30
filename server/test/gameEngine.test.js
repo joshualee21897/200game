@@ -226,6 +226,40 @@ test('milestoneHitPlayerIds is empty when nobody lands on an exact milestone', (
   assert.deepEqual(state.roundResult.milestoneHitPlayerIds, []);
 });
 
+test('roundHistory accumulates a lightweight record for every completed round', () => {
+  const byId = cardsById();
+  const game = new Game(makePlayers(2), { rng: makeRng(10) });
+  game.startRound();
+  assert.deepEqual(game.roundHistory, []);
+
+  const caller1 = game.currentPlayer;
+  const opponent1 = game.players.find((p) => p.id !== caller1.id);
+  caller1.hand = [byId['AS']]; // value 1, wins
+  opponent1.hand = [byId['9S']]; // value 9
+  game.call(caller1.id);
+
+  assert.equal(game.roundHistory.length, 1);
+  assert.equal(game.roundHistory[0].roundNumber, 1);
+  assert.equal(game.roundHistory[0].callerId, caller1.id);
+  assert.equal(game.roundHistory[0].outcome, 'win');
+  assert.equal(game.roundHistory[0].deltas[caller1.id], 0);
+  assert.equal(game.roundHistory[0].deltas[opponent1.id], 9);
+  assert.equal(game.roundHistory[0].scoresAfter[opponent1.id], 9);
+  assert.equal(game.roundHistory[0].hands, undefined); // lighter than roundResult - no actual cards
+
+  game.startRound(game.roundResult.nextStarterId);
+  const caller2 = game.currentPlayer;
+  const opponent2 = game.players.find((p) => p.id !== caller2.id);
+  caller2.hand = [byId['2S']]; // value 2, wins
+  opponent2.hand = [byId['KS']]; // value 11
+  game.call(caller2.id);
+
+  assert.equal(game.roundHistory.length, 2);
+  assert.equal(game.roundHistory[1].roundNumber, 2);
+  // Round 1's entry is untouched by round 2.
+  assert.equal(game.roundHistory[0].roundNumber, 1);
+});
+
 test('draw pile reshuffles from discard pile, preserving pickable + pending groups', () => {
   const game = new Game(makePlayers(2), { rng: makeRng(11) });
   game.startRound();
