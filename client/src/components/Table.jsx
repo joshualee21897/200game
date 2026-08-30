@@ -23,7 +23,10 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
   const [selected, setSelected] = useState(() => new Set());
   const [showInstructions, setShowInstructions] = useState(false);
   const [muted, setMutedState] = useState(() => isMuted());
+  const [showTurnPopup, setShowTurnPopup] = useState(false);
   const prevPhaseRef = useRef(game.phase);
+  const prevCurrentPlayerRef = useRef(game.currentPlayerId);
+  const prevRoundRef = useRef(game.roundNumber);
 
   useEffect(() => {
     setSelected(new Set());
@@ -45,6 +48,28 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
       else playGameWin();
     }
   }, [game.phase]);
+
+  useEffect(() => {
+    // Pops up a big "Your Turn!" banner the moment the turn actually
+    // changes to you - not just whenever isMyTurn happens to be true on a
+    // render (that would also fire on a page reload/reconnect landing
+    // mid-turn, which would be annoying). Also fires on a new round
+    // starting with you again, since currentPlayerId can otherwise be
+    // unchanged across a round_end -> next-round transition (you called
+    // and won, then also opened the next round).
+    const prevPlayer = prevCurrentPlayerRef.current;
+    const prevRound = prevRoundRef.current;
+    prevCurrentPlayerRef.current = game.currentPlayerId;
+    prevRoundRef.current = game.roundNumber;
+
+    const isMyTurnNow = game.currentPlayerId === playerId && (game.phase === 'discard' || game.phase === 'draw');
+    if (!isMyTurnNow) return;
+    if (prevPlayer === game.currentPlayerId && prevRound === game.roundNumber) return;
+
+    setShowTurnPopup(true);
+    const t = setTimeout(() => setShowTurnPopup(false), 1600);
+    return () => clearTimeout(t);
+  }, [game.currentPlayerId, game.phase, game.roundNumber, playerId]);
 
   function toggleMute() {
     const next = !muted;
@@ -84,6 +109,7 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
   }
 
   const isMyTurn = game.currentPlayerId === playerId;
+  const showMyTurnGlow = isMyTurn && (game.phase === 'discard' || game.phase === 'draw');
   const myValue = handValue(hand);
   const canDiscard = isMyTurn && game.phase === 'discard' && selected.size > 0;
   const canCall = isMyTurn && game.phase === 'discard' && myValue <= 5;
@@ -112,7 +138,12 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
   }
 
   return (
-    <div className="table">
+    <div className={`table ${showMyTurnGlow ? 'table-my-turn' : ''}`}>
+      {showTurnPopup && (
+        <div className="your-turn-popup" aria-hidden="true">
+          <span>Your Turn!</span>
+        </div>
+      )}
       <div className="table-header">
         <div>
           Room <strong>{room.code}</strong> &middot; Round {game.roundNumber}

@@ -81,6 +81,54 @@ function App() {
     if (state.game?.phase === 'game_end') clearSession();
   }, [state.game?.phase]);
 
+  const isMyTurn =
+    !!state.game &&
+    (state.game.phase === 'discard' || state.game.phase === 'draw') &&
+    state.game.currentPlayerId === state.yourPlayerId;
+
+  useEffect(() => {
+    // Flashes the tab title so a player who's alt-tabbed away still
+    // notices it's their turn, instead of only finding out once they
+    // happen to switch back. Only bothers flashing while the tab is
+    // actually hidden - no need to hijack the title while they're
+    // already looking at the board.
+    const BASE_TITLE = '200';
+    const TURN_TITLE = '🟢 Your turn! · 200';
+    let intervalId = null;
+
+    function stopFlashing() {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+      document.title = BASE_TITLE;
+    }
+
+    function startFlashing() {
+      if (intervalId) return;
+      let showTurnTitle = true;
+      document.title = TURN_TITLE;
+      intervalId = setInterval(() => {
+        showTurnTitle = !showTurnTitle;
+        document.title = showTurnTitle ? TURN_TITLE : BASE_TITLE;
+      }, 1000);
+    }
+
+    function handleVisibilityChange() {
+      if (!isMyTurn) return;
+      if (document.hidden) startFlashing();
+      else stopFlashing();
+    }
+
+    if (isMyTurn && document.hidden) startFlashing();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      stopFlashing();
+    };
+  }, [isMyTurn]);
+
   const runAction = useCallback(async (event, payload) => {
     setError('');
     setBusy(true);
