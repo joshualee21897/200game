@@ -6,6 +6,7 @@ const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 10;
 const RECONNECT_GRACE_MS = 2 * 60 * 1000;
 const BOT_NAME_POOL = ['Ace', 'Rusty', 'Circuit', 'Chip', 'Pixel', 'Nova', 'Domino', 'Cash', 'Dealer', 'Vega'];
+const BOT_DIFFICULTIES = ['easy', 'medium', 'hard'];
 
 function genRoomCode(existingCodes) {
   let code;
@@ -73,12 +74,13 @@ export class RoomManager {
    * the server drives their turns automatically (see index.js) instead of
    * waiting on a socket that will never send one.
    */
-  addBot(code, requesterId) {
+  addBot(code, requesterId, difficulty = 'medium') {
     const room = this.rooms.get(code);
     if (!room) throw new Error('Room not found');
     if (room.hostId !== requesterId) throw new Error('Only the host can add a bot');
     if (room.status !== 'lobby') throw new Error('Game already in progress');
     if (room.seats.length >= MAX_PLAYERS) throw new Error('Room is full');
+    if (!BOT_DIFFICULTIES.includes(difficulty)) throw new Error('Invalid bot difficulty');
 
     const taken = new Set(room.seats.map((s) => s.name.toLowerCase()));
     let name = BOT_NAME_POOL.find((n) => !taken.has(n.toLowerCase()));
@@ -91,8 +93,24 @@ export class RoomManager {
     }
 
     const playerId = crypto.randomUUID();
-    room.seats.push({ id: playerId, name, connected: true, isBot: true });
+    room.seats.push({ id: playerId, name, connected: true, isBot: true, botDifficulty: difficulty });
     return { room, playerId };
+  }
+
+  /**
+   * Undoes an accidental Add Bot click - host-only, lobby-only, and only
+   * ever removes a bot seat (never a real player, even if the host somehow
+   * passed a human's id here).
+   */
+  removeBot(code, requesterId, botId) {
+    const room = this.rooms.get(code);
+    if (!room) throw new Error('Room not found');
+    if (room.hostId !== requesterId) throw new Error('Only the host can remove a bot');
+    if (room.status !== 'lobby') throw new Error('Game already in progress');
+    const seat = room.seats.find((s) => s.id === botId);
+    if (!seat || !seat.isBot) throw new Error('That bot no longer exists');
+    room.seats = room.seats.filter((s) => s.id !== botId);
+    return { room };
   }
 
   startGame(code, requesterId, options = {}) {
@@ -103,7 +121,10 @@ export class RoomManager {
     if (room.seats.length < MIN_PLAYERS) throw new Error(`Need at least ${MIN_PLAYERS} players`);
     if (room.seats.length > MAX_PLAYERS) throw new Error(`No more than ${MAX_PLAYERS} players`);
 
-    room.game = new Game(room.seats.map((s) => ({ id: s.id, name: s.name, isBot: !!s.isBot })), options);
+    room.game = new Game(
+      room.seats.map((s) => ({ id: s.id, name: s.name, isBot: !!s.isBot, botDifficulty: s.botDifficulty })),
+      options
+    );
     room.status = 'in_game';
     // Game starts itself in a 'rps' phase (throw-off to decide who opens
     // round 1) and calls startRound() once that resolves - see gameEngine.js.
@@ -162,7 +183,13 @@ export class RoomManager {
       code: room.code,
       hostId: room.hostId,
       status: room.status,
-      seats: room.seats.map((s) => ({ id: s.id, name: s.name, connected: s.connected, isBot: !!s.isBot })),
+      seats: room.seats.map((s) => ({
+        id: s.id,
+        name: s.name,
+        connected: s.connected,
+        isBot: !!s.isBot,
+        botDifficulty: s.botDifficulty,
+      })),
     };
   }
 }

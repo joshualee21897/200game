@@ -64,3 +64,55 @@ test('chooseBotDrawSource draws blind when nothing is pickable', () => {
   const result = chooseBotDrawSource([]);
   assert.deepEqual(result, { source: 'pile', cardId: undefined });
 });
+
+test('easy difficulty ignores melds and picks a random card from hand', () => {
+  const byId = cardsById();
+  const hand = [byId['9S'], byId['9H'], byId['2C']];
+  const ids = new Set(hand.map((c) => c.id));
+  for (let i = 0; i < 20; i++) {
+    const result = chooseBotDiscard(hand, 'easy');
+    assert.equal(result.length, 1);
+    assert.ok(ids.has(result[0]));
+  }
+});
+
+test('hard difficulty sheds a same-suit run over a smaller same-rank group', () => {
+  const byId = cardsById();
+  // Run 4-5-6-7 of spades (value 22) beats the pair of 9s (value 18).
+  const hand = [byId['4S'], byId['5S'], byId['6S'], byId['7S'], byId['9C'], byId['9D']];
+  const result = chooseBotDiscard(hand, 'hard');
+  assert.deepEqual(new Set(result), new Set(['4S', '5S', '6S', '7S']));
+});
+
+test('medium difficulty does not consider runs, only same-rank groups', () => {
+  const byId = cardsById();
+  const hand = [byId['4S'], byId['5S'], byId['6S'], byId['2C'], byId['2D']];
+  const result = chooseBotDiscard(hand, 'medium');
+  // The 4-5-6 run is never even considered at medium difficulty, so the
+  // only candidate is the pair of 2s - taken even though shedding it is
+  // worth less than the single 6S would be, since any meld beats a
+  // single card (it shrinks the hand by more for the same one turn).
+  assert.deepEqual(new Set(result), new Set(['2C', '2D']));
+});
+
+test('shouldBotCall: easy is more conservative than medium/hard', () => {
+  assert.equal(shouldBotCall(2, 'easy'), true);
+  assert.equal(shouldBotCall(3, 'easy'), false);
+  assert.equal(shouldBotCall(5, 'easy'), false);
+  assert.equal(shouldBotCall(5, 'medium'), true);
+  assert.equal(shouldBotCall(5, 'hard'), true);
+});
+
+test('chooseBotDrawSource: easy never takes from the discard pile', () => {
+  const byId = cardsById();
+  const result = chooseBotDrawSource([byId['AS']], 'easy');
+  assert.deepEqual(result, { source: 'pile', cardId: undefined });
+});
+
+test('chooseBotDrawSource: hard takes a pricier pickable card than medium would', () => {
+  const byId = cardsById();
+  const result = chooseBotDrawSource([byId['5S']], 'hard');
+  assert.deepEqual(result, { source: 'discard', cardId: '5S' });
+  const mediumResult = chooseBotDrawSource([byId['5S']], 'medium');
+  assert.deepEqual(mediumResult, { source: 'pile', cardId: undefined });
+});

@@ -98,14 +98,15 @@ function isBotSeat(room, playerId) {
 
 function runBotTurn(game, botId) {
   const player = game.players.find((p) => p.id === botId);
+  const difficulty = player.botDifficulty;
   const value = handValue(player.hand);
-  if (shouldBotCall(value)) {
+  if (shouldBotCall(value, difficulty)) {
     game.call(botId);
     return;
   }
-  const cardIds = chooseBotDiscard(player.hand);
+  const cardIds = chooseBotDiscard(player.hand, difficulty);
   game.discard(botId, cardIds);
-  const { source, cardId } = chooseBotDrawSource(game.pickableGroup);
+  const { source, cardId } = chooseBotDrawSource(game.pickableGroup, difficulty);
   game.draw(botId, source, cardId);
 }
 
@@ -200,11 +201,23 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('room:addBot', (_payload, cb) => {
+  socket.on('room:addBot', ({ difficulty } = {}, cb) => {
     try {
       const room = roomManager.getRoom(socket.data.roomCode);
       if (!room) throw new Error('Not in a room');
-      roomManager.addBot(room.code, socket.data.playerId);
+      roomManager.addBot(room.code, socket.data.playerId, difficulty);
+      cb?.({ ok: true });
+      broadcastState(room);
+    } catch (err) {
+      cb?.({ ok: false, error: err.message });
+    }
+  });
+
+  socket.on('room:removeBot', ({ botId } = {}, cb) => {
+    try {
+      const room = roomManager.getRoom(socket.data.roomCode);
+      if (!room) throw new Error('Not in a room');
+      roomManager.removeBot(room.code, socket.data.playerId, botId);
       cb?.({ ok: true });
       broadcastState(room);
     } catch (err) {

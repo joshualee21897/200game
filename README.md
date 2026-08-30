@@ -37,7 +37,7 @@ This builds the React client (`vite build`) and then runs only the Express serve
 ## How a game works
 
 1. One player creates a room and shares the 5-letter room code.
-2. 2-10 players join by typing a display name and the room code (no accounts) - or the host can click "Add Bot" in the waiting room to fill empty seats with computer players (handy for solo/practice games or short-handed groups). Bots play automatically: they meld/discard, choose a draw source, and call, each with a short "thinking" delay.
+2. 2-10 players join by typing a display name and the room code (no accounts) - or the host can click "Add Bot" in the waiting room to fill empty seats with computer players (handy for solo/practice games or short-handed groups), picking Easy/Medium/Hard beforehand and removing one with the ✕ if added by mistake. Bots play automatically: they meld/discard, choose a draw source, and call, each with a short "thinking" delay.
 3. The host starts the game once at least 2 players are seated. Everyone throws rock-paper-scissors to decide who opens round 1 (ties and 3+-way splits just re-throw among whoever's still tied for the win).
 4. Each turn: discard a single card or a valid meld (pair/triple/quad of one rank, or a same-suit run of 3+ consecutive cards — Ace is low, Jokers can't join a meld) — including your entire hand if it's all one valid meld, since the draw right after always brings you back to at least 1 card — then draw one card from the draw pile or the top of the discard pile.
 5. If your hand value is 5 or less, you may call instead of discarding. All hands are revealed and scored per the round-resolution rules below.

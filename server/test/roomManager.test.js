@@ -69,6 +69,49 @@ test('addBot: rejects once the room is full', () => {
   assert.throws(() => rm.addBot(room.code, hostId));
 });
 
+test('addBot: defaults to medium difficulty and accepts easy/hard, rejects garbage', () => {
+  const rm = new RoomManager();
+  const { room, playerId: hostId } = rm.createRoom('Alice');
+  const { playerId: defaultBot } = rm.addBot(room.code, hostId);
+  const { playerId: easyBot } = rm.addBot(room.code, hostId, 'easy');
+  const { playerId: hardBot } = rm.addBot(room.code, hostId, 'hard');
+  const stored = rm.getRoom(room.code);
+  assert.equal(stored.seats.find((s) => s.id === defaultBot).botDifficulty, 'medium');
+  assert.equal(stored.seats.find((s) => s.id === easyBot).botDifficulty, 'easy');
+  assert.equal(stored.seats.find((s) => s.id === hardBot).botDifficulty, 'hard');
+  assert.throws(() => rm.addBot(room.code, hostId, 'nightmare'));
+});
+
+test('removeBot: only the host can remove a bot, and it frees the seat', () => {
+  const rm = new RoomManager();
+  const { room, playerId: hostId } = rm.createRoom('Alice');
+  const { playerId: bobId } = rm.joinRoom(room.code, 'Bob');
+  const { playerId: botId } = rm.addBot(room.code, hostId);
+  assert.equal(rm.getRoom(room.code).seats.length, 3);
+
+  assert.throws(() => rm.removeBot(room.code, bobId, botId)); // not host
+  rm.removeBot(room.code, hostId, botId);
+  const stored = rm.getRoom(room.code);
+  assert.equal(stored.seats.length, 2);
+  assert.equal(stored.seats.some((s) => s.id === botId), false);
+});
+
+test('removeBot: refuses to remove a human seat even if targeted', () => {
+  const rm = new RoomManager();
+  const { room, playerId: hostId } = rm.createRoom('Alice');
+  const { playerId: bobId } = rm.joinRoom(room.code, 'Bob');
+  assert.throws(() => rm.removeBot(room.code, hostId, bobId));
+  assert.equal(rm.getRoom(room.code).seats.length, 2);
+});
+
+test('removeBot: rejects once the game has started', () => {
+  const rm = new RoomManager();
+  const { room, playerId: hostId } = rm.createRoom('Alice');
+  const { playerId: botId } = rm.addBot(room.code, hostId);
+  rm.startGame(room.code, hostId, { rng: () => 0.42 });
+  assert.throws(() => rm.removeBot(room.code, hostId, botId));
+});
+
 test('only host can start; requires at least 2 players', () => {
   const rm = new RoomManager();
   const { room, playerId: hostId } = rm.createRoom('Alice');

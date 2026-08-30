@@ -103,7 +103,8 @@ function App() {
     if (res) saveSession(name, res.roomCode);
   };
   const handleStart = () => runAction('room:start', {});
-  const handleAddBot = () => runAction('room:addBot', {});
+  const handleAddBot = (difficulty) => runAction('room:addBot', { difficulty });
+  const handleRemoveBot = (botId) => runAction('room:removeBot', { botId });
   const handleNextRound = () => runAction('room:nextRound', {});
   const handleDiscard = (cardIds) => runAction('game:discard', { cardIds });
   const handleDraw = (source, cardId) => runAction('game:draw', { source, cardId });
@@ -136,6 +137,7 @@ function App() {
           playerId={state.yourPlayerId}
           onStart={handleStart}
           onAddBot={handleAddBot}
+          onRemoveBot={handleRemoveBot}
           error={error}
           busy={busy}
         />

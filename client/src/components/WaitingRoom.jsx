@@ -1,8 +1,19 @@
 import { useState } from 'react';
 import InstructionsOverlay from './InstructionsOverlay';
 
-export default function WaitingRoom({ room, playerId, onStart, onAddBot, error, busy }) {
+const DIFFICULTIES = [
+  { id: 'easy', label: 'Easy' },
+  { id: 'medium', label: 'Medium' },
+  { id: 'hard', label: 'Hard' },
+];
+
+function difficultyLabel(id) {
+  return DIFFICULTIES.find((d) => d.id === id)?.label || 'Medium';
+}
+
+export default function WaitingRoom({ room, playerId, onStart, onAddBot, onRemoveBot, error, busy }) {
   const [showInstructions, setShowInstructions] = useState(false);
+  const [difficulty, setDifficulty] = useState('medium');
   const isHost = room.hostId === playerId;
   const canStart = room.seats.length >= 2 && room.seats.length <= 10;
   const canAddBot = room.seats.length < 10;
@@ -16,10 +27,19 @@ export default function WaitingRoom({ room, playerId, onStart, onAddBot, error, 
         {room.seats.map((s) => (
           <li key={s.id} className={s.connected ? '' : 'seat-disconnected'}>
             {s.name}
-            {s.isBot && <span className="badge badge-bot">🤖 Bot</span>}
+            {s.isBot && (
+              <span className="badge badge-bot">
+                🤖 Bot &middot; {difficultyLabel(s.botDifficulty)}
+              </span>
+            )}
             {s.id === room.hostId && <span className="badge">Host</span>}
             {s.id === playerId && <span className="badge badge-you">You</span>}
             {!s.connected && <span className="badge badge-warn">Disconnected</span>}
+            {isHost && s.isBot && (
+              <button type="button" className="icon-button seat-remove" onClick={() => onRemoveBot(s.id)} title="Remove bot">
+                ✕
+              </button>
+            )}
           </li>
         ))}
       </ul>
@@ -32,7 +52,19 @@ export default function WaitingRoom({ room, playerId, onStart, onAddBot, error, 
             <button type="button" className="primary" onClick={onStart} disabled={!canStart || busy}>
               Start Game {room.seats.length < 2 ? '(need at least 2 players)' : ''}
             </button>
-            <button type="button" className="secondary" onClick={onAddBot} disabled={!canAddBot || busy}>
+            <div className="bot-difficulty-picker">
+              {DIFFICULTIES.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  className={difficulty === d.id ? 'active' : ''}
+                  onClick={() => setDifficulty(d.id)}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+            <button type="button" className="secondary" onClick={() => onAddBot(difficulty)} disabled={!canAddBot || busy}>
               Add Bot
             </button>
           </>
