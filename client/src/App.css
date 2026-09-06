@@ -378,6 +378,40 @@ button.secondary:active {
   }
 }
 
+.times-up-popup span {
+  background: var(--red);
+  color: #fff;
+  font-size: 1.4rem;
+  max-width: 20em;
+  text-align: center;
+  border-radius: 1em;
+  animation-name: times-up-pop;
+  animation-duration: 2.5s;
+}
+
+@keyframes times-up-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  15% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  85% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+}
+
 .table-header {
   display: flex;
   justify-content: space-between;
@@ -859,6 +893,8 @@ button.secondary:active {
 }
 
 .overlay-panel {
+  position: relative;
+  z-index: 1;
   background: var(--panel-bg);
   border: none;
   border-radius: 24px;
@@ -949,6 +985,31 @@ button.secondary:active {
   50% {
     transform: rotate(12deg) translateY(-0.2em);
   }
+}
+
+/* The big clown takeover for whoever just called wrongly - sits behind the
+   round-end panel (which keeps its own z-index above this) so the "30
+   point penalty" explanation stays fully readable and the Next Round
+   button stays clickable, while the clown itself dominates the space
+   around the panel at roughly half the viewport or more. */
+.big-clown-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.big-clown-emoji {
+  display: inline-block;
+  font-size: 65vmin;
+  line-height: 1;
+  transform-origin: bottom center;
+  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.35));
+  animation: clown-dance 0.7s ease-in-out infinite;
 }
 
 .milestone-banner {

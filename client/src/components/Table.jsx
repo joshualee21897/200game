@@ -16,6 +16,7 @@ import {
   playGameWin,
   playChoice,
   playWrongCall,
+  playLoser,
   playMilestone,
   playBust,
   playYourTurn,
@@ -27,9 +28,18 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
   const [showHistory, setShowHistory] = useState(false);
   const [muted, setMutedState] = useState(() => isMuted());
   const [showTurnPopup, setShowTurnPopup] = useState(false);
+  const [showTimesUp, setShowTimesUp] = useState(false);
   const prevPhaseRef = useRef(game.phase);
   const prevCurrentPlayerRef = useRef(game.currentPlayerId);
   const prevRoundRef = useRef(game.roundNumber);
+  const wasMyTurnRef = useRef(false);
+  // Set true the moment I actually discard/draw/call myself this turn, so
+  // the effect below can tell "my turn ended because I acted" apart from
+  // "my turn ended because the 30s clock ran out and the server auto-played
+  // it for me" - the latter is worth calling out, since otherwise it can
+  // look exactly like a click that silently did nothing (especially if a
+  // late click arrives just after the server's own timeout already fired).
+  const actedThisTurnRef = useRef(false);
 
   useEffect(() => {
     setSelected(new Set());
@@ -42,8 +52,15 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
     if (prev === 'draw' && game.phase === 'discard') playDraw();
     else if (prev === 'discard' && game.phase === 'draw') playDiscard();
     if (game.phase === 'round_end' && prev !== 'round_end') {
-      if (game.roundResult?.outcome === 'wrong_call') playWrongCall();
-      else playRoundEnd();
+      if (game.roundResult?.outcome === 'wrong_call') {
+        // The caller who screwed up gets a dedicated "sad trombone" sting
+        // to go with the big clown takeover on their screen; everyone else
+        // just hears the usual lighter womp-womp.
+        if (playerId === game.roundResult?.callerId) playLoser();
+        else playWrongCall();
+      } else {
+        playRoundEnd();
+      }
       if (game.roundResult?.milestoneHitPlayerIds?.length > 0) playMilestone();
     }
     if (game.phase === 'game_end' && prev !== 'game_end') {
@@ -62,17 +79,29 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
     // and won, then also opened the next round).
     const prevPlayer = prevCurrentPlayerRef.current;
     const prevRound = prevRoundRef.current;
+    const wasMyTurn = wasMyTurnRef.current;
     prevCurrentPlayerRef.current = game.currentPlayerId;
     prevRoundRef.current = game.roundNumber;
 
     const isMyTurnNow = game.currentPlayerId === playerId && (game.phase === 'discard' || game.phase === 'draw');
-    if (!isMyTurnNow) return;
-    if (prevPlayer === game.currentPlayerId && prevRound === game.roundNumber) return;
+    wasMyTurnRef.current = isMyTurnNow;
 
-    playYourTurn();
-    setShowTurnPopup(true);
-    const t = setTimeout(() => setShowTurnPopup(false), 1600);
-    return () => clearTimeout(t);
+    if (isMyTurnNow) {
+      if (prevPlayer === game.currentPlayerId && prevRound === game.roundNumber) return;
+      actedThisTurnRef.current = false;
+      playYourTurn();
+      setShowTurnPopup(true);
+      const t = setTimeout(() => setShowTurnPopup(false), 1600);
+      return () => clearTimeout(t);
+    }
+
+    if (wasMyTurn && !actedThisTurnRef.current) {
+      // My turn just ended and I never actually took an action myself -
+      // the 30s clock ran out and the server auto-played it for me.
+      setShowTimesUp(true);
+      const t = setTimeout(() => setShowTimesUp(false), 2500);
+      return () => clearTimeout(t);
+    }
   }, [game.currentPlayerId, game.phase, game.roundNumber, playerId]);
 
   function toggleMute() {
@@ -138,7 +167,18 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
   }
 
   function submitDiscard() {
+    actedThisTurnRef.current = true;
     onDiscard(Array.from(selected));
+  }
+
+  function handleDraw(source, cardId) {
+    actedThisTurnRef.current = true;
+    onDraw(source, cardId);
+  }
+
+  function handleCall() {
+    actedThisTurnRef.current = true;
+    onCall();
   }
 
   return (
@@ -146,6 +186,11 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
       {showTurnPopup && (
         <div className="your-turn-popup" aria-hidden="true">
           <span>Your Turn!</span>
+        </div>
+      )}
+      {showTimesUp && (
+        <div className="your-turn-popup times-up-popup" aria-hidden="true">
+          <span>⏰ Time's up! Your turn was played for you.</span>
         </div>
       )}
       <div className="table-header">
@@ -190,7 +235,7 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
       <div className="piles">
         <div className="pile">
           <div className="pile-label">Draw pile ({game.drawPileCount})</div>
-          <Card faceDown large disabled={!canDraw} onClick={() => onDraw('pile')} />
+          <Card faceDown large disabled={!canDraw} onClick={() => handleDraw('pile')} />
         </div>
 
         <div className="pile">
@@ -208,7 +253,7 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
             {pickableGroup.length > 0 ? (
               <div className={`discard-group ${pickableGroup.length > 1 ? 'discard-group-meld' : ''}`}>
                 {pickableGroup.map((c) => (
-                  <Card key={c.id} card={c} large disabled={!canDraw} onClick={() => onDraw('discard', c.id)} />
+                  <Card key={c.id} card={c} large disabled={!canDraw} onClick={() => handleDraw('discard', c.id)} />
                 ))}
               </div>
             ) : (
@@ -250,7 +295,7 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
         <button type="button" className="primary" disabled={!canDiscard} onClick={submitDiscard}>
           Discard Selected
         </button>
-        <button type="button" className="call-button" disabled={!canCall} onClick={onCall}>
+        <button type="button" className="call-button" disabled={!canCall} onClick={handleCall}>
           Call!
         </button>
       </div>

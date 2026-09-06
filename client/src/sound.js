@@ -142,9 +142,23 @@ export function playGameWin() {
 
 export function playWrongCall() {
   // A comedic "womp womp" - two low descending glides, trombone-style.
+  // Heard by everyone else at the table when someone calls wrongly.
   play((ctx, t) => {
     [0, 0.34].forEach((offset) => {
       tone(ctx, t + offset, { freq: 300, freqEnd: 170, duration: 0.3, type: 'sawtooth', gain: 0.1 });
+    });
+  });
+}
+
+export function playLoser() {
+  // The classic four-note "sad trombone" descending sting (wah-wah-wah-
+  // waaah) - reserved for whoever actually made the wrong call themselves,
+  // paired with the big clown takeover on their screen.
+  play((ctx, t) => {
+    const notes = [392, 369.99, 349.23, 293.66]; // G4, F#4, F4, D4
+    notes.forEach((freq, i) => {
+      const isLast = i === notes.length - 1;
+      tone(ctx, t + i * 0.28, { freq, duration: isLast ? 0.55 : 0.3, type: 'sawtooth', gain: 0.15 });
     });
   });
 }

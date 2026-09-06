@@ -35,6 +35,18 @@ function ClownBanner({ name }) {
   );
 }
 
+// A much bigger version of the clown, shown only to the player who
+// actually made the wrong call - the round-end panel (with the "30 point
+// penalty" explanation) still sits on top and stays fully readable/
+// clickable, so this just fills the space around it.
+function BigClown() {
+  return (
+    <div className="big-clown-layer" aria-hidden="true">
+      <span className="big-clown-emoji">🤡</span>
+    </div>
+  );
+}
+
 function MilestoneBanner({ names }) {
   return (
     <div className="milestone-banner">
@@ -51,10 +63,12 @@ function MilestoneBanner({ names }) {
 export default function RoundEndOverlay({ game, room, playerId, onNextRound }) {
   const result = game.roundResult;
   const milestoneNames = (result.milestoneHitPlayerIds || []).map((id) => nameFor(room, id));
+  const isWrongCaller = result.outcome === 'wrong_call' && playerId === result.callerId;
 
   return (
     <div className="overlay">
       {result.outcome === 'win' && <Confetti count={40} />}
+      {isWrongCaller && <BigClown />}
       <div className="overlay-panel">
         <h2>Round {game.roundNumber} Result</h2>
         {result.outcome === 'wrong_call' && <ClownBanner name={nameFor(room, result.callerId)} />}
