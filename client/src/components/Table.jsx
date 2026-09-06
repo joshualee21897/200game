@@ -30,8 +30,15 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
   const [showTurnPopup, setShowTurnPopup] = useState(false);
   const [showTimesUp, setShowTimesUp] = useState(false);
   const prevPhaseRef = useRef(game.phase);
-  const prevCurrentPlayerRef = useRef(game.currentPlayerId);
-  const prevRoundRef = useRef(game.roundNumber);
+  // Deliberately NOT seeded from game.currentPlayerId/roundNumber - doing so
+  // meant a page reload/reconnect that lands exactly mid-turn (a dropped
+  // connection, a mobile tab getting suspended and reloaded, opening on a
+  // new device) would see "no change" on its very first check and silently
+  // skip the your-turn popup/chime for a turn the player never actually saw
+  // notified. Sentinel values that can never equal a real id/round number
+  // guarantee the first check always treats an already-active turn as new.
+  const prevCurrentPlayerRef = useRef(null);
+  const prevRoundRef = useRef(null);
   const wasMyTurnRef = useRef(false);
   // Set true the moment I actually discard/draw/call myself this turn, so
   // the effect below can tell "my turn ended because I acted" apart from
