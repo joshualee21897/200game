@@ -997,15 +997,17 @@ button.secondary:active {
   position: fixed;
   inset: 0;
   z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  /* Sized in terms of the emoji's own font-size (below) so the clearance
-     scales with it on every screen size, rather than a fixed em tied to
-     the page's base font. */
-  --clown-size: 44vmin;
-  gap: calc(var(--clown-size) * 0.08);
+  display: grid;
+  /* Name and hint each get exactly the room their own content needs, top
+     and bottom; the emoji gets whatever's left in between and is centered
+     within it. This way a huge name font can never push itself (or the
+     emoji) off the top of the screen - unlike centering the whole stack as
+     one flex column, which overflows equally in both directions once the
+     combined content is taller than the viewport. */
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  padding: 2vh 0;
+  --clown-size: 92vmin;
   background: linear-gradient(160deg, #fff3b0, var(--gold, #ffc94a));
   cursor: pointer;
   overflow: hidden;
@@ -1016,17 +1018,19 @@ button.secondary:active {
   z-index: 1;
   font-family: 'Baloo 2', sans-serif;
   font-weight: 900;
-  font-size: clamp(3rem, 11vmin, 6rem);
+  font-size: clamp(3.5rem, 13vmin, 7.5rem);
   color: #7a4b00;
   text-shadow: 0 3px 0 #fff;
   text-align: center;
   padding: 0 0.3em;
-  /* The dance animation below rotates the (huge) emoji around its bottom
-     edge, which swings its top corners up well past its resting height -
-     this margin has to clear that swing, not just the emoji's static box,
-     so it's proportional to the emoji's own size rather than a small
-     fixed em. */
-  margin-bottom: calc(var(--clown-size) * 0.35);
+}
+
+.big-clown-emoji-wrap {
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .big-clown-emoji {
@@ -1047,6 +1051,74 @@ button.secondary:active {
   color: #7a4b00;
   opacity: 0.85;
   text-align: center;
+}
+
+/* The celebratory counterpart to the big clown takeover above - same
+   grid-based name/emoji/hint layout and sizing approach, shown to every
+   player when someone lands on a milestone rebate. Uses a bouncy scale
+   pulse instead of the clown's rocking dance, and a festive green/gold
+   palette instead of the clown's mocking gold. */
+.big-celebration-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  padding: 2vh 0;
+  --celebration-size: 92vmin;
+  background: linear-gradient(160deg, #d9fbd0, #4fd67a);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.big-celebration-name {
+  position: relative;
+  z-index: 1;
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 900;
+  font-size: clamp(3.5rem, 13vmin, 7.5rem);
+  color: #0b5c2e;
+  text-shadow: 0 3px 0 #fff;
+  text-align: center;
+  padding: 0 0.3em;
+}
+
+.big-celebration-emoji-wrap {
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.big-celebration-emoji {
+  display: inline-block;
+  font-size: var(--celebration-size);
+  line-height: 1;
+  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.3));
+  animation: celebration-bounce 0.6s ease-in-out infinite;
+}
+
+.big-celebration-hint {
+  position: relative;
+  z-index: 1;
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 700;
+  font-size: clamp(0.95rem, 2.6vmin, 1.2rem);
+  color: #0b5c2e;
+  opacity: 0.85;
+  text-align: center;
+}
+
+@keyframes celebration-bounce {
+  0%,
+  100% {
+    transform: scale(1) translateY(0);
+  }
+  50% {
+    transform: scale(1.12) translateY(-0.08em);
+  }
 }
 
 .milestone-banner {

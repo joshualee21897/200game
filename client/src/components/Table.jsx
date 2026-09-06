@@ -15,9 +15,8 @@ import {
   playRoundEnd,
   playGameWin,
   playChoice,
-  playWrongCall,
   playLoser,
-  playMilestone,
+  playBigCelebration,
   playBust,
   playYourTurn,
 } from '../sound';
@@ -60,15 +59,14 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
     else if (prev === 'discard' && game.phase === 'draw') playDiscard();
     if (game.phase === 'round_end' && prev !== 'round_end') {
       if (game.roundResult?.outcome === 'wrong_call') {
-        // The caller who screwed up gets a dedicated "sad trombone" sting
-        // to go with the big clown takeover on their screen; everyone else
-        // just hears the usual lighter womp-womp.
-        if (playerId === game.roundResult?.callerId) playLoser();
-        else playWrongCall();
+        // The big clown takeover is now shown to everyone at the table, not
+        // just the caller who screwed up, so everyone hears the same
+        // condescending sting to go with it.
+        playLoser();
       } else {
         playRoundEnd();
       }
-      if (game.roundResult?.milestoneHitPlayerIds?.length > 0) playMilestone();
+      if (game.roundResult?.milestoneHitPlayerIds?.length > 0) playBigCelebration();
     }
     if (game.phase === 'game_end' && prev !== 'game_end') {
       if (game.finalResult?.bustedPlayerIds?.includes(playerId)) playBust();

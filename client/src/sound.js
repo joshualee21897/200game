@@ -140,35 +140,37 @@ export function playGameWin() {
   });
 }
 
-export function playWrongCall() {
-  // A comedic "womp womp" - two low descending glides, trombone-style.
-  // Heard by everyone else at the table when someone calls wrongly.
-  play((ctx, t) => {
-    [0, 0.34].forEach((offset) => {
-      tone(ctx, t + offset, { freq: 300, freqEnd: 170, duration: 0.3, type: 'sawtooth', gain: 0.1 });
-    });
-  });
-}
-
 export function playLoser() {
-  // The classic four-note "sad trombone" descending sting (wah-wah-wah-
-  // waaah) - reserved for whoever actually made the wrong call themselves,
-  // paired with the big clown takeover on their screen.
+  // An extra-long, deliberately condescending "sad trombone" - the classic
+  // descending sting, drawn out further, then a mocking little "nyah-nyah"
+  // taunt, then one final long droning wah that sags even lower. Paired
+  // with the big clown takeover that everyone at the table now sees.
   play((ctx, t) => {
-    const notes = [392, 369.99, 349.23, 293.66]; // G4, F#4, F4, D4
+    const notes = [392, 369.99, 349.23, 329.63, 293.66]; // G4 down to D4, drawn out
     notes.forEach((freq, i) => {
       const isLast = i === notes.length - 1;
-      tone(ctx, t + i * 0.28, { freq, duration: isLast ? 0.55 : 0.3, type: 'sawtooth', gain: 0.15 });
+      tone(ctx, t + i * 0.38, { freq, duration: isLast ? 0.6 : 0.36, type: 'sawtooth', gain: 0.16 });
     });
+    // A mocking taunt right after the trombone finishes.
+    const tauntStart = t + 2.3;
+    [523.25, 440, 523.25, 440].forEach((freq, i) =>
+      tone(ctx, tauntStart + i * 0.18, { freq, duration: 0.15, type: 'square', gain: 0.1 })
+    );
+    // One final, long condescending "waaaaah" sagging even lower - the capper.
+    tone(ctx, t + 3.15, { freq: 220, freqEnd: 85, duration: 1.0, type: 'sawtooth', gain: 0.15 });
   });
 }
 
-export function playMilestone() {
-  // A bright ascending sparkle run - celebratory, but distinct from the
-  // game-win fanfare so a mid-game milestone doesn't feel like the finale.
+export function playBigCelebration() {
+  // A big, triumphant fanfare for landing on a milestone rebate, to match
+  // the full-screen celebratory takeover now shown to everyone at the
+  // table.
   play((ctx, t) => {
-    [784, 988, 1175, 1568].forEach((freq, i) => tone(ctx, t + i * 0.07, { freq, duration: 0.16, gain: 0.12 }));
-    noiseBurst(ctx, t + 0.3, { duration: 0.12, filterFreq: 4200, Q: 1, gain: 0.1 });
+    noiseBurst(ctx, t, { duration: 0.18, filterFreq: 2800, Q: 0.6, gain: 0.22 }); // party-popper burst
+    const notes = [523.25, 659.25, 783.99, 1046.5, 1318.51]; // C5 up to E6, big ascending run
+    notes.forEach((freq, i) => tone(ctx, t + 0.15 + i * 0.14, { freq, duration: 0.4, gain: 0.17 }));
+    noiseBurst(ctx, t + 0.95, { duration: 0.25, filterFreq: 4500, Q: 1, gain: 0.13 }); // sparkling flourish
+    noiseBurst(ctx, t + 1.05, { duration: 0.2, filterFreq: 3200, Q: 0.8, gain: 0.11 });
   });
 }
 

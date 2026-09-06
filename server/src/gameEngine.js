@@ -304,7 +304,13 @@ export class Game {
     for (const p of this.players) {
       const delta = result.deltas[p.id];
       const preRebate = p.score + delta;
-      const total = milestoneRebate(preRebate, this.bustThreshold);
+      // Only a genuine change this round can trigger the rebate. Without
+      // this guard, a player already sitting at a milestone value from an
+      // earlier round's rebate (e.g. resting at 50) would get shaved
+      // another 50 off every subsequent round where they add nothing -
+      // being the exempt lowest non-caller, or winning outright as caller -
+      // since their score is still sitting on that same exact multiple.
+      const total = delta !== 0 ? milestoneRebate(preRebate, this.bustThreshold) : preRebate;
       if (total !== preRebate) milestoneHitPlayerIds.push(p.id);
       p.score = total;
     }

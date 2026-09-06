@@ -319,6 +319,22 @@ test('exact landing on 200 rebates to 150 instead of busting', () => {
   assert.deepEqual(state.roundResult.milestoneHitPlayerIds, [opponent.id]);
 });
 
+test('call() does not re-apply the milestone rebate when a player adds nothing this round', () => {
+  const byId = cardsById();
+  const game = new Game(makePlayers(2), { rng: makeRng(7) });
+  game.startRound();
+  const caller = game.currentPlayer;
+  const opponent = game.players.find((p) => p.id !== caller.id);
+  caller.hand = [byId['AS']]; // value 1, wins outright -> delta 0
+  opponent.hand = [byId['9S']];
+  caller.score = 50; // already resting at a milestone value from an earlier round's rebate
+  const state = game.call(caller.id);
+  const callerAfter = state.players.find((p) => p.id === caller.id);
+  // Delta is 0 - must stay at 50, not get shaved down to 0 again.
+  assert.equal(callerAfter.score, 50);
+  assert.deepEqual(state.roundResult.milestoneHitPlayerIds, []);
+});
+
 test('milestoneHitPlayerIds is empty when nobody lands on an exact milestone', () => {
   const byId = cardsById();
   const game = new Game(makePlayers(2), { rng: makeRng(10) });
