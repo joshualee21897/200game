@@ -1111,7 +1111,13 @@ button.secondary:active {
   font-size: var(--celebration-size);
   line-height: 1;
   filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.3));
-  animation: celebration-bounce 0.6s ease-in-out infinite;
+  /* A one-time, big bouncy "pop" the moment the celebration screen
+     appears - starts tiny and invisible, bursts well past full size,
+     then springs back down through a couple of shrinking overshoots
+     before settling. Runs once (not infinite) since React mounts this
+     element fresh each time the celebration is shown, which naturally
+     re-triggers the pop on every occurrence without any JS. */
+  animation: celebration-pop-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .big-celebration-hint {
@@ -1125,13 +1131,23 @@ button.secondary:active {
   text-align: center;
 }
 
-@keyframes celebration-bounce {
-  0%,
-  100% {
-    transform: scale(1) translateY(0);
+@keyframes celebration-pop-in {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
   }
-  50% {
-    transform: scale(1.12) translateY(-0.08em);
+  45% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+  65% {
+    transform: scale(0.88);
+  }
+  82% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
   }
 }
 
