@@ -987,29 +987,56 @@ button.secondary:active {
   }
 }
 
-/* The big clown takeover for whoever just called wrongly - sits behind the
-   round-end panel (which keeps its own z-index above this) so the "30
-   point penalty" explanation stays fully readable and the Next Round
-   button stays clickable, while the clown itself dominates the space
-   around the panel at roughly half the viewport or more. */
+/* The big clown takeover for whoever just called wrongly - covers the
+   round-end panel entirely (sits above it, z-index-wise) the moment the
+   round ends, with their name pinned above the clown itself, so the first
+   thing they see is "you got clowned" rather than the scoreboard. Tapping
+   anywhere on it dismisses the clown and reveals the actual round-end
+   panel/result table underneath. */
 .big-clown-layer {
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: 2;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  pointer-events: none;
+  gap: 0.6em;
+  background: linear-gradient(160deg, #fff3b0, var(--gold, #ffc94a));
+  cursor: pointer;
   overflow: hidden;
+}
+
+.big-clown-name {
+  position: relative;
+  z-index: 1;
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 900;
+  font-size: clamp(1.6rem, 6vmin, 2.6rem);
+  color: #7a4b00;
+  text-shadow: 0 2px 0 #fff;
+  text-align: center;
+  padding: 0 0.5em;
 }
 
 .big-clown-emoji {
   display: inline-block;
-  font-size: 65vmin;
+  font-size: 58vmin;
   line-height: 1;
   transform-origin: bottom center;
   filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.35));
   animation: clown-dance 0.7s ease-in-out infinite;
+}
+
+.big-clown-hint {
+  position: relative;
+  z-index: 1;
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 700;
+  font-size: clamp(0.95rem, 2.6vmin, 1.2rem);
+  color: #7a4b00;
+  opacity: 0.85;
+  text-align: center;
 }
 
 .milestone-banner {
