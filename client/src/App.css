@@ -1001,7 +1001,11 @@ button.secondary:active {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.3em;
+  /* Sized in terms of the emoji's own font-size (below) so the clearance
+     scales with it on every screen size, rather than a fixed em tied to
+     the page's base font. */
+  --clown-size: 44vmin;
+  gap: calc(var(--clown-size) * 0.08);
   background: linear-gradient(160deg, #fff3b0, var(--gold, #ffc94a));
   cursor: pointer;
   overflow: hidden;
@@ -1017,12 +1021,17 @@ button.secondary:active {
   text-shadow: 0 3px 0 #fff;
   text-align: center;
   padding: 0 0.3em;
-  margin-bottom: 0.15em;
+  /* The dance animation below rotates the (huge) emoji around its bottom
+     edge, which swings its top corners up well past its resting height -
+     this margin has to clear that swing, not just the emoji's static box,
+     so it's proportional to the emoji's own size rather than a small
+     fixed em. */
+  margin-bottom: calc(var(--clown-size) * 0.35);
 }
 
 .big-clown-emoji {
   display: inline-block;
-  font-size: 46vmin;
+  font-size: var(--clown-size);
   line-height: 1;
   transform-origin: bottom center;
   filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.35));
