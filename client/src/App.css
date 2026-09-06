@@ -1037,9 +1037,23 @@ button.secondary:active {
   display: inline-block;
   font-size: var(--clown-size);
   line-height: 1;
-  transform-origin: bottom center;
+  transform-origin: center center;
   filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.35));
-  animation: clown-dance 0.7s ease-in-out infinite;
+  animation: big-clown-spin 2.4s linear infinite;
+}
+
+/* A continuous clockwise spin for the big full-screen clown - distinct
+   from the small clown-banner icon's left-right rocking (clown-dance)
+   below, which is unchanged. Rotating around dead center (rather than the
+   bottom-anchored rock) keeps the spin in place instead of sweeping the
+   clown off to one side. */
+@keyframes big-clown-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .big-clown-hint {
