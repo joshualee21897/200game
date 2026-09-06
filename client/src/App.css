@@ -1001,7 +1001,7 @@ button.secondary:active {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.6em;
+  gap: 0.3em;
   background: linear-gradient(160deg, #fff3b0, var(--gold, #ffc94a));
   cursor: pointer;
   overflow: hidden;
@@ -1012,16 +1012,17 @@ button.secondary:active {
   z-index: 1;
   font-family: 'Baloo 2', sans-serif;
   font-weight: 900;
-  font-size: clamp(1.6rem, 6vmin, 2.6rem);
+  font-size: clamp(3rem, 11vmin, 6rem);
   color: #7a4b00;
-  text-shadow: 0 2px 0 #fff;
+  text-shadow: 0 3px 0 #fff;
   text-align: center;
-  padding: 0 0.5em;
+  padding: 0 0.3em;
+  margin-bottom: 0.15em;
 }
 
 .big-clown-emoji {
   display: inline-block;
-  font-size: 58vmin;
+  font-size: 46vmin;
   line-height: 1;
   transform-origin: bottom center;
   filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.35));
