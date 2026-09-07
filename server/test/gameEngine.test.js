@@ -29,6 +29,15 @@ test('startRound deals 5 cards each and sets up piles', () => {
   assert.equal(game.turnDeadline > Date.now(), true);
 });
 
+test('getState() exposes turnRemainingMs, anchored to the server clock rather than a raw deadline the client would have to compare against its own', () => {
+  const game = new Game(makePlayers(2), { rng: makeRng(1) });
+  game.startRound();
+  const state = game.getState();
+  // Should read as "close to 30s left" from the server's own point of
+  // view, regardless of what the reading client's system clock says.
+  assert.equal(state.turnRemainingMs > 29000 && state.turnRemainingMs <= 30000, true);
+});
+
 test('startRound uses a single deck for up to 5 players', () => {
   const game = new Game(makePlayers(5), { rng: makeRng(1) });
   game.startRound();

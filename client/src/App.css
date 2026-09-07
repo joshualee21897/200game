@@ -18,6 +18,14 @@
 
 .app-shell {
   min-height: 100vh;
+  /* Mobile Safari's 100vh is based on the browser's LARGEST possible
+     viewport (with its address bar collapsed) even while that bar is
+     still showing and shrinking the actually-visible area - so on first
+     load the page can be taller than what's visible, pushing content
+     below the fold until the bar auto-hides. 100dvh tracks the real,
+     currently-visible viewport instead; the 100vh line above is just a
+     fallback for browsers that don't support dvh yet. */
+  min-height: 100dvh;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -293,6 +301,8 @@ button.secondary:active {
   width: 100%;
   max-width: 1400px;
   min-height: calc(100vh - 48px);
+  /* See .app-shell above re: dvh vs vh on mobile browsers. */
+  min-height: calc(100dvh - 48px);
   /* Fluid scale for everything inside the game screen (cards, chips,
      buttons, gaps - all sized in em below) so the content grows with the
      available space instead of staying pinned at a small fixed size while
@@ -538,7 +548,14 @@ button.secondary:active {
 }
 
 .piles {
-  flex: 1;
+  /* Grows to soak up leftover vertical space so the piles sit centered
+     between the scoreboard and hand on ordinary screens, but capped so it
+     doesn't balloon into an awkward gap of near-empty felt on unusually
+     tall viewports (tablets, and today's larger phones) - past the cap,
+     any extra room is left below the action bar instead, which reads as
+     normal breathing room rather than a layout that looks broken. */
+  flex: 1 1 auto;
+  max-height: 22em;
   display: flex;
   align-items: center;
   gap: 3em;

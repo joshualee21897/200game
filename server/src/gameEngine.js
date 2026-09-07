@@ -400,6 +400,12 @@ export class Game {
       phase: this.phase,
       currentPlayerId: this.phase === 'rps' ? null : this.players[this.turnIndex]?.id ?? null,
       turnDeadline: this.turnDeadline,
+      // Sent alongside the absolute deadline so the client can anchor its
+      // own countdown to ITS OWN clock instead of comparing against this
+      // server timestamp directly - a client whose system clock is off
+      // from the server's (phones drift, or are just set wrong) would
+      // otherwise see the wrong number of seconds from the start.
+      turnRemainingMs: this.turnDeadline != null ? Math.max(0, this.turnDeadline - Date.now()) : null,
       drawPileCount: this.drawPile.length,
       discardPile: this.discardPile,
       pickableGroup: this.pickableGroup,

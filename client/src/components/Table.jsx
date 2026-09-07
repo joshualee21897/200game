@@ -207,7 +207,7 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
           {(game.phase === 'discard' || game.phase === 'draw') && (
             <div className="turn-banner">
               {isMyTurn ? 'Your turn' : `${room.seats.find((s) => s.id === game.currentPlayerId)?.name}'s turn`} &middot;{' '}
-              <Timer deadline={game.turnDeadline} />
+              <Timer remainingMs={game.turnRemainingMs} />
             </div>
           )}
           <button
