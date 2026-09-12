@@ -23,7 +23,7 @@ const BOT_THINK_MS = 3000;
 // this long, the clock resumes on its own regardless of reported state.
 const MAX_TURN_PAUSE_MS = 3 * 60 * 1000;
 // A fixed set rather than free-form input - keeps this a lightweight,
-// can't-be-abused reaction layer instead of a second chat channel.
+// can't-be-abused reaction layer.
 const REACTION_EMOJIS = ['👍', '😂', '😮', '😡', '🔥', '🎉', '🤔', '👏'];
 const REACTION_COOLDOWN_MS = 400;
 
@@ -229,8 +229,8 @@ function broadcastState(room) {
 
 /**
  * Sends a "your turn" push the moment the turn actually changes to a human
- * player - not on every broadcast during that same turn (e.g. someone
- * sending a chat message mid-turn shouldn't re-notify). Deliberately fires
+ * player - not on every broadcast during that same turn (e.g. a reaction
+ * mid-turn shouldn't re-notify). Deliberately fires
  * regardless of whether that player's socket is currently connected: being
  * connected-but-backgrounded is exactly one of the situations this is
  * meant to help with, not just a fully closed tab.
@@ -445,21 +445,9 @@ io.on('connection', (socket) => {
     cb?.({ ok: true });
   });
 
-  socket.on('chat:send', ({ text } = {}, cb) => {
-    try {
-      const room = roomManager.getRoom(socket.data.roomCode);
-      if (!room) throw new Error('Not in a room');
-      roomManager.addChatMessage(room.code, socket.data.playerId, text);
-      cb?.({ ok: true });
-      broadcastState(room);
-    } catch (err) {
-      cb?.({ ok: false, error: err.message });
-    }
-  });
-
-  // Deliberately NOT persisted anywhere (unlike chat) - a reaction is a
-  // fleeting, in-the-moment thing, not part of the room's lasting record,
-  // so it's just relayed straight to whoever's connected right now.
+  // Deliberately NOT persisted anywhere - a reaction is a fleeting,
+  // in-the-moment thing, not part of the room's lasting record, so it's
+  // just relayed straight to whoever's connected right now.
   socket.on('player:reaction', ({ emoji } = {}, cb) => {
     try {
       const room = roomManager.getRoom(socket.data.roomCode);

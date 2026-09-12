@@ -5,7 +5,6 @@ import { saveSession, loadSession, clearSession } from './session';
 import Lobby from './components/Lobby';
 import WaitingRoom from './components/WaitingRoom';
 import Table from './components/Table';
-import ChatPanel from './components/ChatPanel';
 import NotificationToggle from './components/NotificationToggle';
 
 function App() {
@@ -213,7 +212,6 @@ function App() {
   const handleDraw = (source, cardId) => runAction('game:draw', { source, cardId });
   const handleCall = () => runAction('game:call', {});
   const handleRpsChoice = (move) => runAction('game:rpsChoice', { move });
-  const handleSendChat = (text) => runAction('chat:send', { text });
   const handleSendReaction = (emoji) => call('player:reaction', { emoji }).catch(() => {});
 
   // Only the very first load (never having seen a room yet) shows the
@@ -273,7 +271,6 @@ function App() {
           error={error}
           busy={busy}
         />
-        <ChatPanel messages={state.room.chatMessages || []} playerId={state.yourPlayerId} onSend={handleSendChat} />
         <NotificationToggle playerId={state.yourPlayerId} />
         {reconnectBanner}
         {rejoinFailedBanner}
@@ -298,7 +295,6 @@ function App() {
         reactions={reactions}
         error={error}
       />
-      <ChatPanel messages={state.room.chatMessages || []} playerId={state.yourPlayerId} onSend={handleSendChat} />
       <NotificationToggle playerId={state.yourPlayerId} />
       {reconnectBanner}
       {rejoinFailedBanner}

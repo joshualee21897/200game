@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { call } from '../socket';
 import { isPushSupported, enablePush, disablePush, getExistingSubscription } from '../push';
 
-// Rendered once at the App level (like ChatPanel) whenever a room exists,
-// so it's available in the waiting room and the active game alike.
+// Rendered once at the App level whenever a room exists, so it's available
+// in the waiting room and the active game alike.
 export default function NotificationToggle({ playerId }) {
   const [supported] = useState(() => isPushSupported());
   const [enabled, setEnabled] = useState(false);
