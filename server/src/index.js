@@ -8,6 +8,7 @@ import { Server } from 'socket.io';
 import { RoomManager } from './roomManager.js';
 import { handValue } from './cards.js';
 import { chooseBotRpsMove, chooseBotDiscard, shouldBotCall, chooseBotDrawSource } from './bot.js';
+import { isPushEnabled, getPublicKey, sendPush } from './push.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -40,6 +41,8 @@ const turnTimers = new Map(); // roomCode -> Timeout
 const roundAdvanceTimers = new Map(); // roomCode -> Timeout
 const botTimers = new Map(); // roomCode -> Timeout
 const lastReactionAt = new Map(); // playerId -> timestamp, for the reaction-spam cooldown
+const pushSubscriptions = new Map(); // playerId -> PushSubscription, survives disconnects/reconnects
+const lastNotifiedTurnPlayer = new Map(); // roomCode -> playerId, so each turn only sends one push
 
 function clearTurnTimer(code) {
   const t = turnTimers.get(code);
@@ -181,6 +184,47 @@ function broadcastState(room) {
     const hand = room.game && socket.data.playerId ? room.game.getHand(socket.data.playerId) : null;
     socket.emit('state', { room: roomSummary, game: gameState, hand, yourPlayerId: socket.data.playerId });
   });
+  maybeSendTurnPush(room);
+}
+
+/**
+ * Sends a "your turn" push the moment the turn actually changes to a human
+ * player - not on every broadcast during that same turn (e.g. someone
+ * sending a chat message mid-turn shouldn't re-notify). Deliberately fires
+ * regardless of whether that player's socket is currently connected: being
+ * connected-but-backgrounded is exactly one of the situations this is
+ * meant to help with, not just a fully closed tab.
+ */
+async function maybeSendTurnPush(room) {
+  if (!isPushEnabled()) return;
+  const game = room.game;
+  if (!game || (game.phase !== 'discard' && game.phase !== 'draw')) {
+    lastNotifiedTurnPlayer.delete(room.code);
+    return;
+  }
+  const currentId = game.players[game.turnIndex]?.id ?? null;
+  if (!currentId || lastNotifiedTurnPlayer.get(room.code) === currentId) return;
+  lastNotifiedTurnPlayer.set(room.code, currentId);
+
+  const seat = room.seats.find((s) => s.id === currentId);
+  if (!seat || seat.isBot) return;
+  const subscription = pushSubscriptions.get(currentId);
+  if (!subscription) return;
+
+  try {
+    await sendPush(subscription, {
+      title: "It's your turn!",
+      body: `${seat.name}, you're up in Room ${room.code}.`,
+    });
+  } catch (err) {
+    // A dead subscription (browser unsubscribed, cleared data, etc.) -
+    // drop it so we stop trying every future turn.
+    if (err.statusCode === 404 || err.statusCode === 410) {
+      pushSubscriptions.delete(currentId);
+    } else {
+      console.error('push send failed', err.message);
+    }
+  }
 }
 
 io.on('connection', (socket) => {
@@ -333,6 +377,29 @@ io.on('connection', (socket) => {
     } catch (err) {
       cb?.({ ok: false, error: err.message });
     }
+  });
+
+  socket.on('push:getPublicKey', (_payload, cb) => {
+    cb?.({ ok: true, key: getPublicKey() });
+  });
+
+  // Kept by playerId, not socket id, and deliberately outlives this socket
+  // (survives disconnects/reconnects, and even a page reload) - the whole
+  // point of a push subscription is reaching someone whose tab isn't open.
+  socket.on('push:subscribe', ({ subscription } = {}, cb) => {
+    try {
+      if (!socket.data.playerId) throw new Error('Not in a room');
+      if (!subscription?.endpoint) throw new Error('Invalid subscription');
+      pushSubscriptions.set(socket.data.playerId, subscription);
+      cb?.({ ok: true });
+    } catch (err) {
+      cb?.({ ok: false, error: err.message });
+    }
+  });
+
+  socket.on('push:unsubscribe', (_payload, cb) => {
+    if (socket.data.playerId) pushSubscriptions.delete(socket.data.playerId);
+    cb?.({ ok: true });
   });
 
   socket.on('chat:send', ({ text } = {}, cb) => {

@@ -6,6 +6,7 @@ import Lobby from './components/Lobby';
 import WaitingRoom from './components/WaitingRoom';
 import Table from './components/Table';
 import ChatPanel from './components/ChatPanel';
+import NotificationToggle from './components/NotificationToggle';
 
 function App() {
   const [connected, setConnected] = useState(socket.connected);
@@ -258,6 +259,7 @@ function App() {
           busy={busy}
         />
         <ChatPanel messages={state.room.chatMessages || []} playerId={state.yourPlayerId} onSend={handleSendChat} />
+        <NotificationToggle playerId={state.yourPlayerId} />
         {reconnectBanner}
         {rejoinFailedBanner}
       </div>
@@ -282,6 +284,7 @@ function App() {
         error={error}
       />
       <ChatPanel messages={state.room.chatMessages || []} playerId={state.yourPlayerId} onSend={handleSendChat} />
+      <NotificationToggle playerId={state.yourPlayerId} />
       {reconnectBanner}
       {rejoinFailedBanner}
     </div>

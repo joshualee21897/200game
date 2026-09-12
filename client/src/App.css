@@ -1761,6 +1761,25 @@ button.secondary:active {
   transform: translateY(-2px);
 }
 
+.notification-fab {
+  position: fixed;
+  /* Stacked above the chat FAB, continuing the same left-side stack. */
+  bottom: 132px;
+  left: 20px;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  font-size: 1.2rem;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(20, 60, 20, 0.3);
+  z-index: 5;
+}
+
+.notification-fab:hover {
+  background: #fff;
+  transform: translateY(-2px);
+}
+
 .chat-unread-badge {
   position: absolute;
   top: -4px;
