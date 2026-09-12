@@ -9,6 +9,7 @@ const BOT_NAME_POOL = ['Ace', 'Rusty', 'Circuit', 'Chip', 'Pixel', 'Nova', 'Domi
 const BOT_DIFFICULTIES = ['easy', 'medium', 'hard'];
 const MAX_CHAT_MESSAGES = 200; // keeps a long-running room's history from growing unbounded
 const MAX_CHAT_MESSAGE_LENGTH = 300;
+const SERIES_LENGTHS = [1, 3, 5, 7];
 
 function genRoomCode(existingCodes) {
   let code;
@@ -149,8 +150,55 @@ export class RoomManager {
       options
     );
     room.status = 'in_game';
+    // A fresh series always starts here, even for a lone standalone game
+    // (seriesLength 1) - that way the room's series fields are always in a
+    // consistent shape once a game exists, rather than sometimes present.
+    room.seriesLength = SERIES_LENGTHS.includes(options.seriesLength) ? options.seriesLength : 1;
+    room.seriesWins = Object.fromEntries(room.seats.map((s) => [s.id, 0]));
+    room.seriesGameNumber = 1;
+    room.seriesGameResultRecorded = false;
     // Game starts itself in a 'rps' phase (throw-off to decide who opens
     // round 1) and calls startRound() once that resolves - see gameEngine.js.
+    return room;
+  }
+
+  /**
+   * Tallies the game that just ended toward the room's running series
+   * score. Idempotent (guarded by seriesGameResultRecorded) since the
+   * server can end up checking "did this call just end the game" from a
+   * couple of different call sites (a human's game:call vs a bot's).
+   */
+  recordSeriesGameResult(room) {
+    if (!room.game || room.game.phase !== 'game_end') return;
+    if (room.seriesGameResultRecorded) return;
+    const winnerId = room.game.finalResult?.winnerId;
+    if (winnerId && room.seriesWins[winnerId] != null) {
+      room.seriesWins[winnerId] += 1;
+    }
+    room.seriesGameResultRecorded = true;
+  }
+
+  /**
+   * Starts the next game in the series with the same seats (and the same
+   * bust threshold), once the current one has ended and the series itself
+   * isn't decided yet - "best of N" means first to a majority of N wins,
+   * not necessarily playing all N games.
+   */
+  startNextGameInSeries(code, requesterId) {
+    const room = this.rooms.get(code);
+    if (!room) throw new Error('Room not found');
+    if (room.hostId !== requesterId) throw new Error('Only the host can start the next game');
+    if (!room.game || room.game.phase !== 'game_end') throw new Error('The current game is not over yet');
+    const target = Math.ceil(room.seriesLength / 2);
+    const decided = Object.values(room.seriesWins).some((wins) => wins >= target);
+    if (decided) throw new Error('The series is already decided');
+
+    room.game = new Game(
+      room.seats.map((s) => ({ id: s.id, name: s.name, isBot: !!s.isBot, botDifficulty: s.botDifficulty })),
+      { bustThreshold: room.game.bustThreshold }
+    );
+    room.seriesGameNumber += 1;
+    room.seriesGameResultRecorded = false;
     return room;
   }
 
@@ -214,8 +262,11 @@ export class RoomManager {
         botDifficulty: s.botDifficulty,
       })),
       chatMessages: room.chatMessages,
+      seriesLength: room.seriesLength ?? null,
+      seriesWins: room.seriesWins ?? null,
+      seriesGameNumber: room.seriesGameNumber ?? null,
     };
   }
 }
 
-export { MIN_PLAYERS, MAX_PLAYERS, RECONNECT_GRACE_MS };
+export { MIN_PLAYERS, MAX_PLAYERS, RECONNECT_GRACE_MS, SERIES_LENGTHS };

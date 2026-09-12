@@ -197,3 +197,74 @@ test('addChatMessage caps history so a long-running room does not grow chat fore
   // Oldest messages fall off the front - the most recent ones survive.
   assert.equal(stored.chatMessages[stored.chatMessages.length - 1].text, 'msg 209');
 });
+
+test('startGame initializes a fresh series (defaulting an invalid/omitted length to 1)', () => {
+  const rm = new RoomManager();
+  const { room, playerId: hostId } = rm.createRoom('Alice');
+  const { playerId: bobId } = rm.joinRoom(room.code, 'Bob');
+  rm.startGame(room.code, hostId, { seriesLength: 99 }); // not one of the supported lengths
+  const stored = rm.getRoom(room.code);
+  assert.equal(stored.seriesLength, 1);
+  assert.deepEqual(stored.seriesWins, { [hostId]: 0, [bobId]: 0 });
+  assert.equal(stored.seriesGameNumber, 1);
+  assert.equal(rm.roomSummary(stored).seriesLength, 1);
+});
+
+test('recordSeriesGameResult tallies the winner and is idempotent', () => {
+  const rm = new RoomManager();
+  const { room, playerId: hostId } = rm.createRoom('Alice');
+  const { playerId: bobId } = rm.joinRoom(room.code, 'Bob');
+  rm.startGame(room.code, hostId, { seriesLength: 3 });
+  const stored = rm.getRoom(room.code);
+  // Simulate the game having just ended with Alice as winner.
+  stored.game.phase = 'game_end';
+  stored.game.finalResult = { winnerId: hostId, bustedPlayerIds: [bobId], standings: [] };
+  rm.recordSeriesGameResult(stored);
+  assert.equal(stored.seriesWins[hostId], 1);
+  assert.equal(stored.seriesWins[bobId], 0);
+  // A second call (e.g. from a different code path noticing the same
+  // game_end) must not double-count the same result.
+  rm.recordSeriesGameResult(stored);
+  assert.equal(stored.seriesWins[hostId], 1);
+});
+
+test('startNextGameInSeries starts a fresh game with the same seats and bust threshold', () => {
+  const rm = new RoomManager();
+  const { room, playerId: hostId } = rm.createRoom('Alice');
+  rm.joinRoom(room.code, 'Bob');
+  rm.startGame(room.code, hostId, { seriesLength: 3, bustThreshold: 100 });
+  const stored = rm.getRoom(room.code);
+  stored.game.phase = 'game_end';
+  stored.game.finalResult = { winnerId: hostId, bustedPlayerIds: [], standings: [] };
+  rm.recordSeriesGameResult(stored);
+
+  rm.startNextGameInSeries(room.code, hostId);
+  assert.equal(stored.seriesGameNumber, 2);
+  assert.equal(stored.game.phase, 'rps');
+  assert.equal(stored.game.bustThreshold, 100);
+  assert.equal(stored.seriesGameResultRecorded, false);
+});
+
+test('startNextGameInSeries rejects once a player has a majority of series wins', () => {
+  const rm = new RoomManager();
+  const { room, playerId: hostId } = rm.createRoom('Alice');
+  rm.joinRoom(room.code, 'Bob');
+  rm.startGame(room.code, hostId, { seriesLength: 3 }); // best of 3 -> majority is 2
+  const stored = rm.getRoom(room.code);
+  stored.seriesWins[hostId] = 2;
+  stored.game.phase = 'game_end';
+  stored.game.finalResult = { winnerId: hostId, bustedPlayerIds: [], standings: [] };
+  assert.throws(() => rm.startNextGameInSeries(room.code, hostId));
+});
+
+test('startNextGameInSeries requires the current game to be over, and only the host may call it', () => {
+  const rm = new RoomManager();
+  const { room, playerId: hostId } = rm.createRoom('Alice');
+  const { playerId: bobId } = rm.joinRoom(room.code, 'Bob');
+  rm.startGame(room.code, hostId, { seriesLength: 3 });
+  const stored = rm.getRoom(room.code);
+  assert.throws(() => rm.startNextGameInSeries(room.code, hostId)); // still mid-game
+  stored.game.phase = 'game_end';
+  stored.game.finalResult = { winnerId: hostId, bustedPlayerIds: [], standings: [] };
+  assert.throws(() => rm.startNextGameInSeries(room.code, bobId)); // not host
+});

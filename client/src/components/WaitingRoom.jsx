@@ -8,6 +8,7 @@ const DIFFICULTIES = [
 ];
 
 const BUST_THRESHOLDS = [50, 100, 150, 200];
+const SERIES_LENGTHS = [1, 3, 5, 7];
 
 function difficultyLabel(id) {
   return DIFFICULTIES.find((d) => d.id === id)?.label || 'Medium';
@@ -17,6 +18,7 @@ export default function WaitingRoom({ room, playerId, onStart, onAddBot, onRemov
   const [showInstructions, setShowInstructions] = useState(false);
   const [difficulty, setDifficulty] = useState('medium');
   const [bustThreshold, setBustThreshold] = useState(200);
+  const [seriesLength, setSeriesLength] = useState(1);
   const isHost = room.hostId === playerId;
   const canStart = room.seats.length >= 2 && room.seats.length <= 10;
   const canAddBot = room.seats.length < 10;
@@ -65,7 +67,25 @@ export default function WaitingRoom({ room, playerId, onStart, onAddBot, onRemov
                 </button>
               ))}
             </div>
-            <button type="button" className="primary" onClick={() => onStart(bustThreshold)} disabled={!canStart || busy}>
+            <div className="bust-threshold-picker">
+              <span className="bust-threshold-label">Best of:</span>
+              {SERIES_LENGTHS.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  className={seriesLength === n ? 'active' : ''}
+                  onClick={() => setSeriesLength(n)}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="primary"
+              onClick={() => onStart(bustThreshold, seriesLength)}
+              disabled={!canStart || busy}
+            >
               Start Game {room.seats.length < 2 ? '(need at least 2 players)' : ''}
             </button>
             <div className="bot-difficulty-picker">

@@ -5,7 +5,7 @@ function listNames(names) {
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
-export default function GameEndOverlay({ game, room, playerId }) {
+export default function GameEndOverlay({ game, room, playerId, onNextGame }) {
   const result = game.finalResult;
   const bustedIds = result.bustedPlayerIds || [];
   const bustedNames = bustedIds.map((id) => room.seats.find((s) => s.id === id)?.name).filter(Boolean);
@@ -14,6 +14,17 @@ export default function GameEndOverlay({ game, room, playerId }) {
   const isBusted = bustedIds.includes(playerId);
 
   const bustBeVerb = bustedNames.length > 1 ? 'are' : 'is';
+
+  const seriesLength = room.seriesLength || 1;
+  const seriesWins = room.seriesWins || {};
+  const isSeries = seriesLength > 1;
+  // Best of N is a race to a majority of the N games, not necessarily
+  // playing all of them - e.g. best of 5 is decided the moment someone
+  // reaches 3 wins.
+  const seriesTarget = Math.ceil(seriesLength / 2);
+  const seriesWinnerId = Object.keys(seriesWins).find((id) => seriesWins[id] >= seriesTarget);
+  const seriesWinnerName = seriesWinnerId ? room.seats.find((s) => s.id === seriesWinnerId)?.name : null;
+  const isHost = room.hostId === playerId;
 
   let rank = 0;
 
@@ -64,7 +75,39 @@ export default function GameEndOverlay({ game, room, playerId }) {
           </tbody>
         </table>
 
-        <p className="subtitle">Start a new room to play again.</p>
+        {isSeries && (
+          <div className="series-standings">
+            <h3>
+              {seriesWinnerId ? 'Series Result' : `Best of ${seriesLength} · Game ${room.seriesGameNumber || 1}`}
+            </h3>
+            {seriesWinnerId && <p className="win-banner series-win-banner">🏆 {seriesWinnerName} wins the series!</p>}
+            <ul className="series-wins-list">
+              {room.seats.map((s) => (
+                <li key={s.id} className={s.id === playerId ? 'row-you' : ''}>
+                  <span>
+                    {s.name}
+                    {s.id === playerId ? ' (You)' : ''}
+                  </span>
+                  <span>
+                    {seriesWins[s.id] ?? 0} win{(seriesWins[s.id] ?? 0) === 1 ? '' : 's'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {isSeries && !seriesWinnerId ? (
+          isHost ? (
+            <button type="button" className="primary" onClick={onNextGame}>
+              Start Next Game
+            </button>
+          ) : (
+            <p className="subtitle">Waiting for the host to start the next game&hellip;</p>
+          )
+        ) : (
+          <p className="subtitle">Start a new room to play again.</p>
+        )}
       </div>
     </div>
   );

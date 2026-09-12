@@ -188,7 +188,8 @@ function App() {
     const res = await runAction('room:join', { name, roomCode });
     if (res) saveSession(name, res.roomCode);
   };
-  const handleStart = (bustThreshold) => runAction('room:start', { bustThreshold });
+  const handleStart = (bustThreshold, seriesLength) => runAction('room:start', { bustThreshold, seriesLength });
+  const handleStartNextGame = () => runAction('room:nextGame', {});
   const handleAddBot = (difficulty) => runAction('room:addBot', { difficulty });
   const handleRemoveBot = (botId) => runAction('room:removeBot', { botId });
   const handleNextRound = () => runAction('room:nextRound', {});
@@ -276,6 +277,7 @@ function App() {
         onNextRound={handleNextRound}
         onRpsChoice={handleRpsChoice}
         onReact={handleSendReaction}
+        onNextGame={handleStartNextGame}
         reactions={reactions}
         error={error}
       />

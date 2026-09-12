@@ -151,6 +151,7 @@ function scheduleBotTurn(room) {
     const handle = setTimeout(() => {
       try {
         runBotTurn(game, current.id);
+        if (game.phase === 'game_end') roomManager.recordSeriesGameResult(room);
       } catch (err) {
         console.error('bot turn failed', err);
       }
@@ -234,11 +235,25 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('room:start', ({ bustThreshold } = {}, cb) => {
+  socket.on('room:start', ({ bustThreshold, seriesLength } = {}, cb) => {
     try {
       const room = roomManager.getRoom(socket.data.roomCode);
       if (!room) throw new Error('Not in a room');
-      const started = roomManager.startGame(room.code, socket.data.playerId, { bustThreshold });
+      const started = roomManager.startGame(room.code, socket.data.playerId, { bustThreshold, seriesLength });
+      cb?.({ ok: true });
+      broadcastState(started);
+      scheduleTurnTimer(started);
+      scheduleBotTurn(started);
+    } catch (err) {
+      cb?.({ ok: false, error: err.message });
+    }
+  });
+
+  socket.on('room:nextGame', (_payload, cb) => {
+    try {
+      const room = roomManager.getRoom(socket.data.roomCode);
+      if (!room) throw new Error('Not in a room');
+      const started = roomManager.startNextGameInSeries(room.code, socket.data.playerId);
       cb?.({ ok: true });
       broadcastState(started);
       scheduleTurnTimer(started);
@@ -310,6 +325,7 @@ io.on('connection', (socket) => {
       const room = roomManager.getRoom(socket.data.roomCode);
       if (!room || !room.game) throw new Error('No active game');
       room.game.call(socket.data.playerId);
+      if (room.game.phase === 'game_end') roomManager.recordSeriesGameResult(room);
       cb?.({ ok: true });
       broadcastState(room);
       clearTurnTimer(room.code);

@@ -35,6 +35,7 @@ export default function Table({
   onNextRound,
   onRpsChoice,
   onReact,
+  onNextGame,
   reactions = [],
   error,
 }) {
@@ -354,7 +355,9 @@ export default function Table({
       {game.phase === 'round_end' && (
         <RoundEndOverlay game={game} room={room} playerId={playerId} onNextRound={onNextRound} />
       )}
-      {game.phase === 'game_end' && <GameEndOverlay game={game} room={room} playerId={playerId} />}
+      {game.phase === 'game_end' && (
+        <GameEndOverlay game={game} room={room} playerId={playerId} onNextGame={onNextGame} />
+      )}
 
       {soundButtons}
     </div>
