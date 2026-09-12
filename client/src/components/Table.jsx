@@ -7,7 +7,9 @@ import RpsPanel from './RpsPanel';
 import InstructionsOverlay from './InstructionsOverlay';
 import ScoreHistoryOverlay from './ScoreHistoryOverlay';
 import QuickReactions from './QuickReactions';
+import CustomizePanel from './CustomizePanel';
 import { handValue } from '../gameRules';
+import { getCardBack, setCardBack, getFeltTheme, setFeltTheme } from '../cosmetics';
 import {
   isMuted,
   setMuted,
@@ -40,6 +42,8 @@ export default function Table({
   const [showInstructions, setShowInstructions] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [muted, setMutedState] = useState(() => isMuted());
+  const [cardBack, setCardBackState] = useState(() => getCardBack());
+  const [feltTheme, setFeltThemeState] = useState(() => getFeltTheme());
   const [showTurnPopup, setShowTurnPopup] = useState(false);
   const [showTimesUp, setShowTimesUp] = useState(false);
   const prevPhaseRef = useRef(game.phase);
@@ -129,6 +133,16 @@ export default function Table({
     setMutedState(next);
   }
 
+  function handleCardBackChange(id) {
+    setCardBack(id);
+    setCardBackState(id);
+  }
+
+  function handleFeltChange(id) {
+    setFeltTheme(id);
+    setFeltThemeState(id);
+  }
+
   function handleRpsChoose(move) {
     playChoice();
     onRpsChoice(move);
@@ -148,6 +162,12 @@ export default function Table({
         ?
       </button>
       {showInstructions && <InstructionsOverlay onClose={() => setShowInstructions(false)} />}
+      <CustomizePanel
+        cardBack={cardBack}
+        feltTheme={feltTheme}
+        onCardBackChange={handleCardBackChange}
+        onFeltChange={handleFeltChange}
+      />
     </>
   );
 
@@ -201,7 +221,7 @@ export default function Table({
   }
 
   return (
-    <div className={`table ${showMyTurnGlow ? 'table-my-turn' : ''}`}>
+    <div className={`table ${showMyTurnGlow ? 'table-my-turn' : ''}`} data-felt={feltTheme} data-cardback={cardBack}>
       {showTurnPopup && (
         <div className="your-turn-popup" aria-hidden="true">
           <span>Your Turn!</span>

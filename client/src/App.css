@@ -914,6 +914,58 @@ button.secondary:active {
     repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.45) 0, rgba(255, 255, 255, 0.45) 2px, transparent 2px, transparent 9px);
 }
 
+/* Card back cosmetics - a `data-cardback` attribute on the table root
+   swaps these via descendant selector, so Card/the pile markup never need
+   to know cosmetics exist at all. "diamond" (above) is the default/no-op
+   look, kept for whoever never opens the customize panel. */
+.table[data-cardback='stripes'] .card-back {
+  background: linear-gradient(160deg, var(--purple) 0%, var(--purple-dark) 100%);
+}
+
+.table[data-cardback='stripes'] .card-back-pattern {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.5) 0,
+    rgba(255, 255, 255, 0.5) 3px,
+    transparent 3px,
+    transparent 10px
+  );
+}
+
+.table[data-cardback='dots'] .card-back {
+  background: linear-gradient(160deg, var(--red) 0%, var(--red-dark) 100%);
+}
+
+.table[data-cardback='dots'] .card-back-pattern {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.6) 2px, transparent 2.5px);
+  background-size: 10px 10px;
+}
+
+.table[data-cardback='solid'] .card-back {
+  background: linear-gradient(160deg, var(--gold) 0%, var(--gold-dark) 100%);
+}
+
+.table[data-cardback='solid'] .card-back-pattern {
+  background-image: none;
+  background-color: transparent;
+  border-color: rgba(255, 255, 255, 0.75);
+}
+
+/* Table felt cosmetics - "classic" (the default gradient set on .table
+   itself) is left alone; the rest override it via the same data attribute
+   approach as the card backs above. */
+.table[data-felt='ocean'] {
+  background: linear-gradient(180deg, #cfe8fb 0%, #b3ddfa 22%, #6fb8e8 45%, #3f8fc9 75%, #2a6a9e 100%);
+}
+
+.table[data-felt='sunset'] {
+  background: linear-gradient(180deg, #ffe3c2 0%, #ffcf9e 22%, #ff9d6c 45%, #e8674a 75%, #b8433a 100%);
+}
+
+.table[data-felt='midnight'] {
+  background: linear-gradient(180deg, #2a2f4a 0%, #232a4a 22%, #1c2140 45%, #141a33 75%, #0d1024 100%);
+}
+
 /* --- Interaction states --- */
 
 .card-clickable {
@@ -1758,6 +1810,85 @@ button.secondary:active {
 
 .chat-input-row button {
   flex-shrink: 0;
+}
+
+.customize-fab {
+  position: fixed;
+  /* Stacked above the how-to-play button, mirroring the chat FAB's stack
+     over mute on the opposite corner. */
+  bottom: 76px;
+  right: 20px;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  font-size: 1.2rem;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(20, 60, 20, 0.3);
+  z-index: 5;
+}
+
+.customize-fab:hover {
+  background: #fff;
+  transform: translateY(-2px);
+}
+
+.customize-panel h3 {
+  margin: 16px 0 8px;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+
+.swatch-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.felt-swatch,
+.cardback-swatch {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 3px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.swatch-selected {
+  border-color: var(--gold-dark);
+  box-shadow: 0 0 0 2px #fff inset;
+}
+
+.felt-swatch-classic {
+  background: linear-gradient(160deg, #9bd177, #4f8a35);
+}
+
+.felt-swatch-ocean {
+  background: linear-gradient(160deg, #6fb8e8, #2a6a9e);
+}
+
+.felt-swatch-sunset {
+  background: linear-gradient(160deg, #ff9d6c, #b8433a);
+}
+
+.felt-swatch-midnight {
+  background: linear-gradient(160deg, #232a4a, #0d1024);
+}
+
+.cardback-swatch-diamond {
+  background: linear-gradient(160deg, var(--blue), var(--blue-dark));
+}
+
+.cardback-swatch-stripes {
+  background: linear-gradient(160deg, var(--purple), var(--purple-dark));
+}
+
+.cardback-swatch-dots {
+  background: linear-gradient(160deg, var(--red), var(--red-dark));
+}
+
+.cardback-swatch-solid {
+  background: linear-gradient(160deg, var(--gold), var(--gold-dark));
 }
 
 .instructions-panel section {
