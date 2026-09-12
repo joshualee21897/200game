@@ -107,6 +107,11 @@ export class Game {
       hand: [],
       score: 0,
       connected: true,
+      // Whether this player's tab/window is currently backgrounded, per
+      // their own visibilitychange reporting - independent of `connected`,
+      // since a backgrounded mobile browser can keep the socket alive
+      // while throttling JS for several seconds (see setTurnPlayerHidden).
+      hidden: false,
       isBot: !!p.isBot,
       botDifficulty: p.botDifficulty,
     }));
@@ -134,13 +139,19 @@ export class Game {
     this.roundHistory = [];
     this.finalResult = null;
     this.turnDeadline = null;
-    // Set while the current player is disconnected mid-turn, holding how
-    // much of their 30s was left the moment they dropped - turnDeadline
-    // goes back to null in the meantime so nothing enforces a deadline
-    // against someone who isn't there to see it count down (see
-    // setConnected). Restored into a fresh turnDeadline the moment they
-    // reconnect, so a dropped connection never quietly eats their turn.
+    // Set while the current player's turn is paused, holding how much of
+    // their 30s was left the moment the pause started - turnDeadline goes
+    // back to null in the meantime so nothing enforces a deadline against
+    // someone who isn't there to see it count down. Restored into a fresh
+    // turnDeadline once every pause reason clears, so neither a dropped
+    // connection nor a backgrounded tab quietly eats into their turn.
     this.turnPausedRemainingMs = null;
+    // Which things are currently holding the pause (e.g. 'disconnected',
+    // 'hidden') - a Set rather than a single flag because both can happen
+    // at once (a backgrounded tab is also more likely to drop its socket),
+    // and the clock should only actually resume once every reason clears,
+    // not the moment the first one does.
+    this.turnPauseReasons = new Set();
   }
 
   get currentPlayer() {
@@ -196,6 +207,9 @@ export class Game {
     this.phase = 'discard';
     this.roundResult = null;
     this.turnDeadline = Date.now() + TURN_SECONDS * 1000;
+    this.turnPausedRemainingMs = null;
+    this.turnPauseReasons.clear();
+    this.syncTurnClockForCurrentPlayer();
     return this.getState();
   }
 
@@ -298,6 +312,23 @@ export class Game {
     this.turnIndex = (this.turnIndex + 1) % this.players.length;
     this.phase = 'discard';
     this.turnDeadline = Date.now() + TURN_SECONDS * 1000;
+    this.turnPausedRemainingMs = null;
+    this.turnPauseReasons.clear();
+    this.syncTurnClockForCurrentPlayer();
+  }
+
+  // Whoever the turn just passed to might already be disconnected or
+  // backgrounded from before their turn even started (they dropped or
+  // switched away during someone else's turn and haven't come back yet) -
+  // without this, only a NEW disconnect/hide event while it's already
+  // their turn would pause the clock, and a player who was already gone
+  // would get a full 30s silently ticking away unseen from the first
+  // moment it becomes their turn.
+  syncTurnClockForCurrentPlayer() {
+    const current = this.currentPlayer;
+    if (!current) return;
+    if (!current.connected) this.pauseTurnClock(current.id, 'disconnected');
+    if (current.hidden) this.pauseTurnClock(current.id, 'hidden');
   }
 
   call(playerId) {
@@ -398,18 +429,44 @@ export class Game {
   setConnected(playerId, connected) {
     const player = this.playerById(playerId);
     player.connected = connected;
+    if (connected) this.resumeTurnClock(playerId, 'disconnected');
+    else this.pauseTurnClock(playerId, 'disconnected');
+  }
 
+  // Lets the client tell us its tab/window has gone into the background
+  // (or come back) without that meaning the socket actually dropped - a
+  // backgrounded mobile browser can throttle JS for several seconds while
+  // keeping the connection alive, which would otherwise silently burn
+  // through the current player's 30s before they're even looking again.
+  setTurnPlayerHidden(playerId, hidden) {
+    const player = this.playerById(playerId);
+    player.hidden = hidden;
+    if (hidden) this.pauseTurnClock(playerId, 'hidden');
+    else this.resumeTurnClock(playerId, 'hidden');
+  }
+
+  pauseTurnClock(playerId, reason) {
     const isCurrentTurnPlayer =
       this.currentPlayer?.id === playerId && (this.phase === 'discard' || this.phase === 'draw');
     if (!isCurrentTurnPlayer) return;
-
-    if (!connected && this.turnDeadline != null) {
+    this.turnPauseReasons.add(reason);
+    if (this.turnDeadline != null) {
       this.turnPausedRemainingMs = Math.max(0, this.turnDeadline - Date.now());
       this.turnDeadline = null;
-    } else if (connected && this.turnPausedRemainingMs != null) {
-      this.turnDeadline = Date.now() + this.turnPausedRemainingMs;
-      this.turnPausedRemainingMs = null;
     }
+  }
+
+  resumeTurnClock(playerId, reason) {
+    const isCurrentTurnPlayer =
+      this.currentPlayer?.id === playerId && (this.phase === 'discard' || this.phase === 'draw');
+    if (!isCurrentTurnPlayer) return;
+    this.turnPauseReasons.delete(reason);
+    // Only actually restarts the clock once every pause reason has
+    // cleared - e.g. a reconnect while the tab is still backgrounded
+    // shouldn't resume it out from under a player who still can't see it.
+    if (this.turnPauseReasons.size > 0 || this.turnPausedRemainingMs == null) return;
+    this.turnDeadline = Date.now() + this.turnPausedRemainingMs;
+    this.turnPausedRemainingMs = null;
   }
 
   getState() {

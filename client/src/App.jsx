@@ -120,6 +120,21 @@ function App() {
     if (state.game?.phase === 'game_end') clearSession();
   }, [state.game?.phase]);
 
+  useEffect(() => {
+    // Tells the server whenever this tab/window goes into or out of the
+    // background - a backgrounded mobile browser (an in-app browser like
+    // Telegram's included) can throttle JS for several seconds while
+    // keeping the socket connected, which would otherwise let the current
+    // player's 30s turn clock silently run out before they're even
+    // looking again. The server only actually acts on this while it's this
+    // player's own turn, so it's safe to just always report it.
+    function reportVisibility() {
+      socket.emit('player:visibility', { hidden: document.hidden });
+    }
+    document.addEventListener('visibilitychange', reportVisibility);
+    return () => document.removeEventListener('visibilitychange', reportVisibility);
+  }, []);
+
   const isMyTurn =
     !!state.game &&
     (state.game.phase === 'discard' || state.game.phase === 'draw') &&

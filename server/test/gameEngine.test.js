@@ -79,6 +79,60 @@ test('setConnected does not touch the deadline for a player whose turn it is not
   assert.equal(game.turnPausedRemainingMs, null);
 });
 
+test('setTurnPlayerHidden(true) pauses the current player\'s deadline like a disconnect does', () => {
+  const game = new Game(makePlayers(2), { rng: makeRng(1) });
+  game.startRound();
+  const current = game.currentPlayer.id;
+
+  game.setTurnPlayerHidden(current, true);
+  assert.equal(game.turnDeadline, null);
+  assert.equal(game.turnPausedRemainingMs > 29000 && game.turnPausedRemainingMs <= 30000, true);
+
+  game.setTurnPlayerHidden(current, false);
+  assert.equal(game.turnPausedRemainingMs, null);
+  assert.equal(game.turnDeadline > Date.now(), true);
+});
+
+test('being both disconnected and hidden only resumes the clock once both clear', () => {
+  const game = new Game(makePlayers(2), { rng: makeRng(1) });
+  game.startRound();
+  const current = game.currentPlayer.id;
+
+  game.setConnected(current, false);
+  game.setTurnPlayerHidden(current, true);
+  assert.equal(game.turnDeadline, null);
+
+  // Reconnecting alone should not resume it - they're still backgrounded.
+  game.setConnected(current, true);
+  assert.equal(game.turnDeadline, null);
+  assert.equal(game.turnPausedRemainingMs > 29000 && game.turnPausedRemainingMs <= 30000, true);
+
+  // Only once the last reason clears does the clock actually resume.
+  game.setTurnPlayerHidden(current, false);
+  assert.equal(game.turnPausedRemainingMs, null);
+  assert.equal(game.turnDeadline > Date.now(), true);
+});
+
+test('advancing the turn to a player who was already disconnected/hidden pauses immediately, not after a fresh 30s', () => {
+  const game = new Game(makePlayers(2), { rng: makeRng(1) });
+  game.startRound();
+  const first = game.currentPlayer.id;
+  const second = game.players.find((p) => p.id !== first).id;
+
+  // The next player drops while it's still the first player's turn.
+  game.setConnected(second, false);
+  assert.equal(game.turnDeadline > Date.now(), true); // unaffected - not their turn yet
+
+  // Now the turn actually passes to them via a normal discard+draw.
+  const firstPlayerHand = game.playerById(first).hand;
+  game.discard(first, [firstPlayerHand[0].id]);
+  game.draw(first, 'pile');
+
+  assert.equal(game.currentPlayer.id, second);
+  assert.equal(game.turnDeadline, null);
+  assert.equal(game.turnPausedRemainingMs > 29000 && game.turnPausedRemainingMs <= 30000, true);
+});
+
 test('startRound uses a single deck for up to 5 players', () => {
   const game = new Game(makePlayers(5), { rng: makeRng(1) });
   game.startRound();

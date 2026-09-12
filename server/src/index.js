@@ -16,6 +16,12 @@ const PORT = process.env.PORT || 3001;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 const ROUND_END_AUTO_ADVANCE_MS = 25000;
 const BOT_THINK_MS = 3000;
+// A pause (disconnected and/or backgrounded) is self-reported by the
+// client, so it must never be able to block the game forever - a page
+// reload while backgrounded, or a missed event, would otherwise leave a
+// paused turn stuck with no timeout ever firing again. This caps it: past
+// this long, the clock resumes on its own regardless of reported state.
+const MAX_TURN_PAUSE_MS = 3 * 60 * 1000;
 // A fixed set rather than free-form input - keeps this a lightweight,
 // can't-be-abused reaction layer instead of a second chat channel.
 const REACTION_EMOJIS = ['👍', '😂', '😮', '😡', '🔥', '🎉', '🤔', '👏'];
@@ -40,6 +46,7 @@ const roomManager = new RoomManager();
 const turnTimers = new Map(); // roomCode -> Timeout
 const roundAdvanceTimers = new Map(); // roomCode -> Timeout
 const botTimers = new Map(); // roomCode -> Timeout
+const pauseSafetyTimers = new Map(); // roomCode -> Timeout, see MAX_TURN_PAUSE_MS
 const lastReactionAt = new Map(); // playerId -> timestamp, for the reaction-spam cooldown
 const pushSubscriptions = new Map(); // playerId -> PushSubscription, survives disconnects/reconnects
 const lastNotifiedTurnPlayer = new Map(); // roomCode -> playerId, so each turn only sends one push
@@ -62,12 +69,42 @@ function clearBotTimer(code) {
   botTimers.delete(code);
 }
 
+function clearPauseSafetyTimer(code) {
+  const t = pauseSafetyTimers.get(code);
+  if (t) clearTimeout(t);
+  pauseSafetyTimers.delete(code);
+}
+
+// Arms (or clears) the MAX_TURN_PAUSE_MS safety cap for whatever pause
+// state the game is currently in - a no-op unless the current player's
+// turn is actually paused right now. Called from scheduleTurnTimer itself
+// (see below) so it stays in sync with every action that could change
+// whose turn it is or whether it's paused, without every call site having
+// to remember it separately.
+function schedulePauseSafety(room) {
+  clearPauseSafetyTimer(room.code);
+  const game = room.game;
+  if (!game || game.turnDeadline != null || game.turnPauseReasons.size === 0) return;
+  const handle = setTimeout(() => {
+    const current = game.currentPlayer;
+    game.turnPauseReasons.clear();
+    if (current) game.resumeTurnClock(current.id, '__pause_cap__');
+    broadcastState(room);
+    scheduleTurnTimer(room);
+  }, MAX_TURN_PAUSE_MS);
+  pauseSafetyTimers.set(room.code, handle);
+}
+
 function scheduleTurnTimer(room) {
   clearTurnTimer(room.code);
   const game = room.game;
-  // turnDeadline is null while the current player's turn is paused for a
-  // disconnect (see Game#setConnected) - nothing to enforce until they're
-  // back and a fresh deadline is set.
+  // Called after every action that could change whose turn it is or
+  // whether it's paused, so the pause safety cap is re-armed here too
+  // instead of needing every call site to remember it separately.
+  schedulePauseSafety(room);
+  // turnDeadline is null while the current player's turn is paused (see
+  // Game#setConnected / setTurnPlayerHidden) - nothing to enforce until
+  // they're back and a fresh deadline is set.
   if (!game || (game.phase !== 'discard' && game.phase !== 'draw') || game.turnDeadline == null) return;
   const delay = Math.max(0, game.turnDeadline - Date.now());
   const handle = setTimeout(() => {
@@ -437,6 +474,20 @@ io.on('connection', (socket) => {
     } catch (err) {
       cb?.({ ok: false, error: err.message });
     }
+  });
+
+  // Lets a client report its own tab/window going into or out of the
+  // background, without that meaning the connection dropped - a
+  // backgrounded mobile browser (e.g. an in-app browser like Telegram's)
+  // can throttle JS for several seconds while keeping the socket alive,
+  // which would otherwise silently eat into the current player's 30s
+  // before they're even looking at the screen again.
+  socket.on('player:visibility', ({ hidden } = {}) => {
+    const room = roomManager.getRoom(socket.data.roomCode);
+    if (!room?.game || !socket.data.playerId) return;
+    room.game.setTurnPlayerHidden(socket.data.playerId, !!hidden);
+    broadcastState(room);
+    scheduleTurnTimer(room);
   });
 
   socket.on('disconnect', () => {
