@@ -10,6 +10,12 @@ const HAND_SIZE = 5;
 const DOUBLE_DECK_MIN_PLAYERS = 6;
 export const BUST_THRESHOLDS = [50, 100, 150, 200];
 const DEFAULT_BUST_THRESHOLD = 200;
+// How much of the discard pile getState() actually sends the client - it
+// only ever displays the current pickable/pending groups plus a 3-card
+// history peek, so this just needs enough margin over the largest
+// realistic meld to never visibly clip; it isn't a gameplay limit; the
+// server's own `discardPile` array is untouched and keeps every card.
+const DISCARD_PILE_STATE_LIMIT = 16;
 
 // Every exact multiple of 50 up to (and including) the bust threshold
 // rebates 50 points off - e.g. a 100-point game only has milestones at 50
@@ -489,7 +495,14 @@ export class Game {
           ? Math.max(0, this.turnDeadline - Date.now())
           : this.turnPausedRemainingMs,
       drawPileCount: this.drawPile.length,
-      discardPile: this.discardPile,
+      // The client only ever displays a handful of the most recent
+      // discards (the current pickable/pending groups, plus a short fanned
+      // "history" peek behind them) - sending the whole pile here would
+      // mean this payload, sent on essentially every broadcast, keeps
+      // growing for as long as a round runs without anyone reshuffling.
+      // A generous tail comfortably covers every current use with room to
+      // spare, capping it regardless of how long the round goes.
+      discardPile: this.discardPile.slice(-DISCARD_PILE_STATE_LIMIT),
       pickableGroup: this.pickableGroup,
       pendingGroup: this.pendingGroup || [],
       rps:

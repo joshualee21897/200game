@@ -16,6 +16,13 @@ export const socket = io(SERVER_URL, {
   reconnectionAttempts: Infinity,
   reconnectionDelay: 500,
   reconnectionDelayMax: 5000,
+  // Left unset, socket.io always opens with a slower HTTP long-poll
+  // handshake and only upgrades to a real WebSocket a round-trip or two
+  // later - paid on every fresh connect AND every reconnect (a mobile
+  // network blip, a backgrounded tab resuming). Trying websocket first
+  // skips that handshake on the common case where it just works, falling
+  // back to polling only if it can't connect at all.
+  transports: ['websocket', 'polling'],
 });
 
 export function call(event, payload = {}) {

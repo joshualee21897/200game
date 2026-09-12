@@ -16,6 +16,15 @@
   --panel-border: #eaf1e5;
 }
 
+/* Taps on every button (cards included - Card.jsx renders one) register
+   immediately instead of waiting out the ~300ms double-tap-to-zoom delay
+   some mobile browsers and in-app WebViews (Telegram's included) still
+   apply by default - one of the more common causes of an interactive game
+   "feeling" laggy on a touchscreen even when nothing is actually slow. */
+button {
+  touch-action: manipulation;
+}
+
 .app-shell {
   min-height: 100vh;
   /* Mobile Safari's 100vh is based on the browser's LARGEST possible
@@ -1742,29 +1751,10 @@ button.secondary:active {
   transform: translateY(-2px);
 }
 
-.chat-fab {
+.notification-fab {
   position: fixed;
   /* Stacked directly above the mute button rather than sharing its corner. */
   bottom: 76px;
-  left: 20px;
-  width: 46px;
-  height: 46px;
-  border-radius: 999px;
-  font-size: 1.2rem;
-  background: #fff;
-  box-shadow: 0 4px 12px rgba(20, 60, 20, 0.3);
-  z-index: 5;
-}
-
-.chat-fab:hover {
-  background: #fff;
-  transform: translateY(-2px);
-}
-
-.notification-fab {
-  position: fixed;
-  /* Stacked above the chat FAB, continuing the same left-side stack. */
-  bottom: 132px;
   left: 20px;
   width: 46px;
   height: 46px;
@@ -1780,101 +1770,10 @@ button.secondary:active {
   transform: translateY(-2px);
 }
 
-.chat-unread-badge {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  background: var(--red);
-  color: #fff;
-  font-size: 0.65rem;
-  font-weight: 800;
-  min-width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 4px;
-  box-shadow: 0 0 0 2px #fff;
-}
-
-.chat-panel {
-  display: flex;
-  flex-direction: column;
-  max-height: 80vh;
-}
-
-.chat-message-list {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 12px 0;
-  min-height: 120px;
-  max-height: 50vh;
-}
-
-.chat-message {
-  background: var(--green-light);
-  border-radius: 12px;
-  padding: 8px 12px;
-  max-width: 85%;
-  align-self: flex-start;
-}
-
-.chat-message-you {
-  background: var(--green);
-  align-self: flex-end;
-}
-
-.chat-message-you .chat-message-name,
-.chat-message-you .chat-message-text {
-  color: #fff;
-}
-
-.chat-message-name {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: var(--green-dark);
-  margin-bottom: 2px;
-}
-
-.chat-message-text {
-  color: var(--ink);
-  word-break: break-word;
-}
-
-.chat-input-row {
-  display: flex;
-  gap: 8px;
-}
-
-.chat-input-row input {
-  flex: 1;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 2px solid var(--green-light);
-  background: #fbfffa;
-  color: var(--ink);
-  font-size: 0.95rem;
-  font-family: inherit;
-}
-
-.chat-input-row input:focus {
-  outline: none;
-  border-color: var(--green);
-}
-
-.chat-input-row button {
-  flex-shrink: 0;
-}
-
 .customize-fab {
   position: fixed;
-  /* Stacked above the how-to-play button, mirroring the chat FAB's stack
-     over mute on the opposite corner. */
+  /* Stacked above the how-to-play button, mirroring the notification FAB's
+     stack over mute on the opposite corner. */
   bottom: 76px;
   right: 20px;
   width: 46px;

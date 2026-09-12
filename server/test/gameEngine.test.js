@@ -133,6 +133,25 @@ test('advancing the turn to a player who was already disconnected/hidden pauses 
   assert.equal(game.turnPausedRemainingMs > 29000 && game.turnPausedRemainingMs <= 30000, true);
 });
 
+test('getState() caps how much of the discard pile it sends, without touching the real pile', () => {
+  const game = new Game(makePlayers(2), { rng: makeRng(1) });
+  game.startRound();
+  // Simulate a round that's run long enough to pile up way more discards
+  // than the client ever actually displays.
+  const byId = cardsById();
+  game.discardPile = Object.values(byId).slice(0, 40);
+
+  const state = game.getState();
+  assert.equal(game.discardPile.length, 40); // the real pile is untouched
+  assert.equal(state.discardPile.length < 40, true); // what's sent is capped
+  // The cards actually sent are the most recent ones (the tail), since
+  // that's the only part the client's history peek ever reads.
+  assert.deepEqual(
+    state.discardPile.map((c) => c.id),
+    game.discardPile.slice(-state.discardPile.length).map((c) => c.id)
+  );
+});
+
 test('startRound uses a single deck for up to 5 players', () => {
   const game = new Game(makePlayers(5), { rng: makeRng(1) });
   game.startRound();
