@@ -65,7 +65,10 @@ function clearBotTimer(code) {
 function scheduleTurnTimer(room) {
   clearTurnTimer(room.code);
   const game = room.game;
-  if (!game || (game.phase !== 'discard' && game.phase !== 'draw')) return;
+  // turnDeadline is null while the current player's turn is paused for a
+  // disconnect (see Game#setConnected) - nothing to enforce until they're
+  // back and a fresh deadline is set.
+  if (!game || (game.phase !== 'discard' && game.phase !== 'draw') || game.turnDeadline == null) return;
   const delay = Math.max(0, game.turnDeadline - Date.now());
   const handle = setTimeout(() => {
     try {
@@ -250,6 +253,9 @@ io.on('connection', (socket) => {
       socket.join(room.code);
       cb?.({ ok: true, roomCode: room.code, playerId, reconnected });
       broadcastState(room);
+      // Resumes the reconnecting player's own paused turn timer, if it was
+      // theirs when they dropped - a no-op for anyone else's turn.
+      scheduleTurnTimer(room);
     } catch (err) {
       cb?.({ ok: false, error: err.message });
     }
@@ -442,7 +448,13 @@ io.on('connection', (socket) => {
       if (room) broadcastState(room);
     });
     const room = roomManager.getRoom(roomCode);
-    if (room) broadcastState(room);
+    if (room) {
+      broadcastState(room);
+      // If it was this player's turn, their deadline was just paused
+      // (turnDeadline set to null) - re-arming here clears the running
+      // setTimeout instead of letting it fire against a paused deadline.
+      scheduleTurnTimer(room);
+    }
   });
 });
 

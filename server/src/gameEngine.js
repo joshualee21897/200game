@@ -134,6 +134,13 @@ export class Game {
     this.roundHistory = [];
     this.finalResult = null;
     this.turnDeadline = null;
+    // Set while the current player is disconnected mid-turn, holding how
+    // much of their 30s was left the moment they dropped - turnDeadline
+    // goes back to null in the meantime so nothing enforces a deadline
+    // against someone who isn't there to see it count down (see
+    // setConnected). Restored into a fresh turnDeadline the moment they
+    // reconnect, so a dropped connection never quietly eats their turn.
+    this.turnPausedRemainingMs = null;
   }
 
   get currentPlayer() {
@@ -391,6 +398,18 @@ export class Game {
   setConnected(playerId, connected) {
     const player = this.playerById(playerId);
     player.connected = connected;
+
+    const isCurrentTurnPlayer =
+      this.currentPlayer?.id === playerId && (this.phase === 'discard' || this.phase === 'draw');
+    if (!isCurrentTurnPlayer) return;
+
+    if (!connected && this.turnDeadline != null) {
+      this.turnPausedRemainingMs = Math.max(0, this.turnDeadline - Date.now());
+      this.turnDeadline = null;
+    } else if (connected && this.turnPausedRemainingMs != null) {
+      this.turnDeadline = Date.now() + this.turnPausedRemainingMs;
+      this.turnPausedRemainingMs = null;
+    }
   }
 
   getState() {
@@ -405,7 +424,13 @@ export class Game {
       // server timestamp directly - a client whose system clock is off
       // from the server's (phones drift, or are just set wrong) would
       // otherwise see the wrong number of seconds from the start.
-      turnRemainingMs: this.turnDeadline != null ? Math.max(0, this.turnDeadline - Date.now()) : null,
+      // Falls back to the frozen paused value while the current player is
+      // disconnected, so the display holds steady at whatever was left
+      // instead of blanking out until they're back.
+      turnRemainingMs:
+        this.turnDeadline != null
+          ? Math.max(0, this.turnDeadline - Date.now())
+          : this.turnPausedRemainingMs,
       drawPileCount: this.drawPile.length,
       discardPile: this.discardPile,
       pickableGroup: this.pickableGroup,

@@ -38,6 +38,47 @@ test('getState() exposes turnRemainingMs, anchored to the server clock rather th
   assert.equal(state.turnRemainingMs > 29000 && state.turnRemainingMs <= 30000, true);
 });
 
+test('setConnected(false) pauses the current player\'s turn deadline instead of letting it keep counting down unseen', () => {
+  const game = new Game(makePlayers(2), { rng: makeRng(1) });
+  game.startRound();
+  const current = game.currentPlayer.id;
+
+  game.setConnected(current, false);
+  assert.equal(game.turnDeadline, null);
+  assert.equal(game.turnPausedRemainingMs > 29000 && game.turnPausedRemainingMs <= 30000, true);
+  // The paused remaining time still surfaces through getState() so the
+  // display doesn't blank out while the current player is away.
+  const state = game.getState();
+  assert.equal(state.turnRemainingMs, game.turnPausedRemainingMs);
+});
+
+test('setConnected(true) resumes the paused deadline with the same time that was left, not a fresh 30s', () => {
+  const game = new Game(makePlayers(2), { rng: makeRng(1) });
+  game.startRound();
+  const current = game.currentPlayer.id;
+
+  game.setConnected(current, false);
+  const pausedRemaining = game.turnPausedRemainingMs;
+  game.setConnected(current, true);
+
+  assert.equal(game.turnPausedRemainingMs, null);
+  const remainingNow = game.turnDeadline - Date.now();
+  // Should be right back around what was left when they disconnected, not
+  // reset to a full 30s nor left at whatever it would have decayed to.
+  assert.equal(Math.abs(remainingNow - pausedRemaining) < 500, true);
+});
+
+test('setConnected does not touch the deadline for a player whose turn it is not', () => {
+  const game = new Game(makePlayers(2), { rng: makeRng(1) });
+  game.startRound();
+  const other = game.players.find((p) => p.id !== game.currentPlayer.id).id;
+  const deadlineBefore = game.turnDeadline;
+
+  game.setConnected(other, false);
+  assert.equal(game.turnDeadline, deadlineBefore);
+  assert.equal(game.turnPausedRemainingMs, null);
+});
+
 test('startRound uses a single deck for up to 5 players', () => {
   const game = new Game(makePlayers(5), { rng: makeRng(1) });
   game.startRound();
