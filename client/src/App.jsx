@@ -23,6 +23,14 @@ function App() {
   const joinedRef = useRef(false);
   const [reactions, setReactions] = useState([]);
   const reactionIdRef = useRef(0);
+  // Once we've shown a room at all, a later disconnect is a mid-session
+  // blip, not a fresh load - the UI should keep showing the last known
+  // board with a small "reconnecting" note instead of wiping the whole
+  // screen back to a blank "Connecting..." panel, which used to happen on
+  // even a sub-second network hiccup and read as "I got disconnected"
+  // every time, even though socket.io was about to auto-reconnect anyway.
+  const hadRoomRef = useRef(false);
+  const [rejoinFailed, setRejoinFailed] = useState(false);
 
   useEffect(() => {
     // Reactions are relayed live, not stored in room state (see server) -
@@ -45,22 +53,31 @@ function App() {
     // reconnects (a flaky connection, not a deliberate "leave"). It's only
     // ever attempted when the current connection isn't already known to be
     // joined, so it never interrupts someone actively using the app.
-    function attemptAutoRejoin(retriesLeft = 2) {
+    // Retries broadly (not just the one specific race it used to target)
+    // with a short backoff, since a reconnect can transiently fail for a
+    // few different reasons - only gives up and clears the session after
+    // several tries actually fail to find that seat.
+    function attemptAutoRejoin(attempt = 0) {
       if (joinedRef.current) return;
       const saved = loadSession();
       if (!saved) return;
+      setRejoinFailed(false);
       call('room:join', { name: saved.name, roomCode: saved.roomCode })
         .then(() => {
           joinedRef.current = true;
+          setRejoinFailed(false);
         })
         .catch((err) => {
-          // The old socket's seat may not have flipped to "disconnected" yet
-          // server-side when a flaky connection reconnects fast - give that
-          // a moment and retry before giving up on the saved session.
-          if (retriesLeft > 0 && /already active/i.test(err.message)) {
-            setTimeout(() => attemptAutoRejoin(retriesLeft - 1), 1500);
-          } else {
+          if (attempt < 5) {
+            setTimeout(() => attemptAutoRejoin(attempt + 1), Math.min(1000 * 2 ** attempt, 8000));
+          } else if (/room not found|no longer/i.test(err.message)) {
+            // The room itself is genuinely gone - nothing left to retry.
             clearSession();
+          } else {
+            // Something else is stopping the rejoin (e.g. the room's now
+            // full, or mid-round in a way that matters) - stop retrying
+            // silently and let the player see what's going on and choose.
+            setRejoinFailed(true);
           }
         });
     }
@@ -77,7 +94,10 @@ function App() {
     }
     function onState(payload) {
       setState(payload);
-      if (payload.room) joinedRef.current = true;
+      if (payload.room) {
+        joinedRef.current = true;
+        hadRoomRef.current = true;
+      }
     }
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
@@ -179,7 +199,13 @@ function App() {
   const handleSendChat = (text) => runAction('chat:send', { text });
   const handleSendReaction = (emoji) => call('player:reaction', { emoji }).catch(() => {});
 
-  if (!connected) {
+  // Only the very first load (never having seen a room yet) shows the
+  // full blank "Connecting..." screen. Once a room's been shown at least
+  // once, a later disconnect keeps showing that last-known board - with a
+  // small banner below - rather than yanking it away on every brief blip,
+  // which is what used to make the game feel like it "disconnected
+  // easily" even when socket.io reconnected within a second or two.
+  if (!connected && !hadRoomRef.current) {
     return (
       <div className="app-shell">
         <div className="panel">
@@ -189,10 +215,31 @@ function App() {
     );
   }
 
+  const reconnectBanner = !connected && (
+    <div className="reconnect-banner">🔌 Reconnecting&hellip;</div>
+  );
+  const rejoinFailedBanner = rejoinFailed && (
+    <div className="reconnect-banner reconnect-banner-failed">
+      Couldn't rejoin your seat automatically.
+      <button
+        type="button"
+        className="secondary"
+        onClick={() => {
+          setRejoinFailed(false);
+          clearSession();
+          window.location.reload();
+        }}
+      >
+        Back to lobby
+      </button>
+    </div>
+  );
+
   if (!state.room) {
     return (
       <div className="app-shell">
         <Lobby onCreate={handleCreate} onJoin={handleJoin} error={error} busy={busy} />
+        {rejoinFailedBanner}
       </div>
     );
   }
@@ -210,6 +257,8 @@ function App() {
           busy={busy}
         />
         <ChatPanel messages={state.room.chatMessages || []} playerId={state.yourPlayerId} onSend={handleSendChat} />
+        {reconnectBanner}
+        {rejoinFailedBanner}
       </div>
     );
   }
@@ -231,6 +280,8 @@ function App() {
         error={error}
       />
       <ChatPanel messages={state.room.chatMessages || []} playerId={state.yourPlayerId} onSend={handleSendChat} />
+      {reconnectBanner}
+      {rejoinFailedBanner}
     </div>
   );
 }

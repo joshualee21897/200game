@@ -4,7 +4,7 @@ import { Game } from './gameEngine.js';
 const ROOM_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no ambiguous 0/O/1/I
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 10;
-const RECONNECT_GRACE_MS = 2 * 60 * 1000;
+const RECONNECT_GRACE_MS = 5 * 60 * 1000;
 const BOT_NAME_POOL = ['Ace', 'Rusty', 'Circuit', 'Chip', 'Pixel', 'Nova', 'Domino', 'Cash', 'Dealer', 'Vega'];
 const BOT_DIFFICULTIES = ['easy', 'medium', 'hard'];
 const MAX_CHAT_MESSAGES = 200; // keeps a long-running room's history from growing unbounded
