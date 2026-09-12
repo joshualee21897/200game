@@ -169,3 +169,31 @@ test('disconnecting mid-game keeps the seat (no auto-removal)', async () => {
   assert.equal(stored.seats.length, 2);
   assert.equal(stored.seats.find((s) => s.id === hostId).connected, false);
 });
+
+test('addChatMessage appends a message tagged with the sender name, visible via roomSummary', () => {
+  const rm = new RoomManager();
+  const { room, playerId: hostId } = rm.createRoom('Alice');
+  rm.addChatMessage(room.code, hostId, '  gg  ');
+  const stored = rm.getRoom(room.code);
+  assert.equal(stored.chatMessages.length, 1);
+  assert.equal(stored.chatMessages[0].text, 'gg'); // trimmed
+  assert.equal(stored.chatMessages[0].name, 'Alice');
+  assert.equal(rm.roomSummary(stored).chatMessages.length, 1);
+});
+
+test('addChatMessage rejects an empty message and a sender not seated in the room', () => {
+  const rm = new RoomManager();
+  const { room, playerId: hostId } = rm.createRoom('Alice');
+  assert.throws(() => rm.addChatMessage(room.code, hostId, '   '));
+  assert.throws(() => rm.addChatMessage(room.code, 'not-a-real-id', 'hi'));
+});
+
+test('addChatMessage caps history so a long-running room does not grow chat forever', () => {
+  const rm = new RoomManager();
+  const { room, playerId: hostId } = rm.createRoom('Alice');
+  for (let i = 0; i < 210; i++) rm.addChatMessage(room.code, hostId, `msg ${i}`);
+  const stored = rm.getRoom(room.code);
+  assert.equal(stored.chatMessages.length, 200);
+  // Oldest messages fall off the front - the most recent ones survive.
+  assert.equal(stored.chatMessages[stored.chatMessages.length - 1].text, 'msg 209');
+});

@@ -15,6 +15,10 @@ const PORT = process.env.PORT || 3001;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 const ROUND_END_AUTO_ADVANCE_MS = 25000;
 const BOT_THINK_MS = 3000;
+// A fixed set rather than free-form input - keeps this a lightweight,
+// can't-be-abused reaction layer instead of a second chat channel.
+const REACTION_EMOJIS = ['👍', '😂', '😮', '😡', '🔥', '🎉', '🤔', '👏'];
+const REACTION_COOLDOWN_MS = 400;
 
 const app = express();
 app.use(cors({ origin: CLIENT_ORIGIN }));
@@ -35,6 +39,7 @@ const roomManager = new RoomManager();
 const turnTimers = new Map(); // roomCode -> Timeout
 const roundAdvanceTimers = new Map(); // roomCode -> Timeout
 const botTimers = new Map(); // roomCode -> Timeout
+const lastReactionAt = new Map(); // playerId -> timestamp, for the reaction-spam cooldown
 
 function clearTurnTimer(code) {
   const t = turnTimers.get(code);
@@ -159,17 +164,22 @@ function scheduleBotTurn(room) {
   }
 }
 
-function broadcastState(room) {
-  const sockets = io.sockets.adapter.rooms.get(room.code);
+function forEachSocketInRoom(roomCode, fn) {
+  const sockets = io.sockets.adapter.rooms.get(roomCode);
   if (!sockets) return;
-  const roomSummary = roomManager.roomSummary(room);
-  const gameState = room.game ? room.game.getState() : null;
   for (const socketId of sockets) {
     const socket = io.sockets.sockets.get(socketId);
-    if (!socket) continue;
+    if (socket) fn(socket);
+  }
+}
+
+function broadcastState(room) {
+  const roomSummary = roomManager.roomSummary(room);
+  const gameState = room.game ? room.game.getState() : null;
+  forEachSocketInRoom(room.code, (socket) => {
     const hand = room.game && socket.data.playerId ? room.game.getHand(socket.data.playerId) : null;
     socket.emit('state', { room: roomSummary, game: gameState, hand, yourPlayerId: socket.data.playerId });
-  }
+  });
 }
 
 io.on('connection', (socket) => {
@@ -309,8 +319,40 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('chat:send', ({ text } = {}, cb) => {
+    try {
+      const room = roomManager.getRoom(socket.data.roomCode);
+      if (!room) throw new Error('Not in a room');
+      roomManager.addChatMessage(room.code, socket.data.playerId, text);
+      cb?.({ ok: true });
+      broadcastState(room);
+    } catch (err) {
+      cb?.({ ok: false, error: err.message });
+    }
+  });
+
+  // Deliberately NOT persisted anywhere (unlike chat) - a reaction is a
+  // fleeting, in-the-moment thing, not part of the room's lasting record,
+  // so it's just relayed straight to whoever's connected right now.
+  socket.on('player:reaction', ({ emoji } = {}, cb) => {
+    try {
+      const room = roomManager.getRoom(socket.data.roomCode);
+      if (!room) throw new Error('Not in a room');
+      if (!REACTION_EMOJIS.includes(emoji)) throw new Error('Invalid reaction');
+      const playerId = socket.data.playerId;
+      const now = Date.now();
+      if (now - (lastReactionAt.get(playerId) || 0) < REACTION_COOLDOWN_MS) throw new Error('Slow down');
+      lastReactionAt.set(playerId, now);
+      cb?.({ ok: true });
+      forEachSocketInRoom(room.code, (s) => s.emit('reaction', { playerId, emoji }));
+    } catch (err) {
+      cb?.({ ok: false, error: err.message });
+    }
+  });
+
   socket.on('disconnect', () => {
     const { roomCode, playerId } = socket.data;
+    lastReactionAt.delete(playerId);
     if (!roomCode || !playerId) return;
     roomManager.markDisconnected(roomCode, playerId, () => {
       const room = roomManager.getRoom(roomCode);

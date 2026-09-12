@@ -6,6 +6,7 @@ import GameEndOverlay from './GameEndOverlay';
 import RpsPanel from './RpsPanel';
 import InstructionsOverlay from './InstructionsOverlay';
 import ScoreHistoryOverlay from './ScoreHistoryOverlay';
+import QuickReactions from './QuickReactions';
 import { handValue } from '../gameRules';
 import {
   isMuted,
@@ -21,7 +22,20 @@ import {
   playYourTurn,
 } from '../sound';
 
-export default function Table({ room, game, hand, playerId, onDiscard, onDraw, onCall, onNextRound, onRpsChoice, error }) {
+export default function Table({
+  room,
+  game,
+  hand,
+  playerId,
+  onDiscard,
+  onDraw,
+  onCall,
+  onNextRound,
+  onRpsChoice,
+  onReact,
+  reactions = [],
+  error,
+}) {
   const [selected, setSelected] = useState(() => new Set());
   const [showInstructions, setShowInstructions] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -224,18 +238,30 @@ export default function Table({ room, game, hand, playerId, onDiscard, onDraw, o
       {showHistory && <ScoreHistoryOverlay game={game} room={room} onClose={() => setShowHistory(false)} />}
 
       <div className="scoreboard">
-        {game.players.map((p) => (
-          <div key={p.id} className={`score-chip ${p.id === game.currentPlayerId ? 'score-chip-active' : ''}`}>
-            <span className="score-name">
-              {p.isBot && '🤖 '}
-              {p.name}
-              {!p.connected && ' (offline)'}
-            </span>
-            <span className="score-cards">{p.handCount} cards</span>
-            <span className="score-total">{p.score} pts</span>
-          </div>
-        ))}
+        {game.players.map((p) => {
+          // Only the latest reaction per player is shown - a spammed run
+          // just restarts the same bubble's pop-in rather than stacking.
+          const reaction = reactions.filter((r) => r.playerId === p.id).at(-1);
+          return (
+            <div key={p.id} className={`score-chip ${p.id === game.currentPlayerId ? 'score-chip-active' : ''}`}>
+              {reaction && (
+                <span key={reaction.id} className="score-chip-reaction" aria-hidden="true">
+                  {reaction.emoji}
+                </span>
+              )}
+              <span className="score-name">
+                {p.isBot && '🤖 '}
+                {p.name}
+                {!p.connected && ' (offline)'}
+              </span>
+              <span className="score-cards">{p.handCount} cards</span>
+              <span className="score-total">{p.score} pts</span>
+            </div>
+          );
+        })}
       </div>
+
+      {onReact && <QuickReactions onReact={onReact} />}
 
       <div className="piles">
         <div className="pile">

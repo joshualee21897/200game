@@ -7,6 +7,8 @@ const MAX_PLAYERS = 10;
 const RECONNECT_GRACE_MS = 2 * 60 * 1000;
 const BOT_NAME_POOL = ['Ace', 'Rusty', 'Circuit', 'Chip', 'Pixel', 'Nova', 'Domino', 'Cash', 'Dealer', 'Vega'];
 const BOT_DIFFICULTIES = ['easy', 'medium', 'hard'];
+const MAX_CHAT_MESSAGES = 200; // keeps a long-running room's history from growing unbounded
+const MAX_CHAT_MESSAGE_LENGTH = 300;
 
 function genRoomCode(existingCodes) {
   let code;
@@ -34,6 +36,7 @@ export class RoomManager {
       seats: [{ id: hostId, name: trimmed, connected: true }],
       game: null,
       disconnectTimers: new Map(),
+      chatMessages: [],
     };
     this.rooms.set(code, room);
     return { room, playerId: hostId };
@@ -113,6 +116,26 @@ export class RoomManager {
     return { room };
   }
 
+  /**
+   * Appends a chat message from a seated player (bot or human - a bot seat
+   * can't actually call this since nothing drives it to, but nothing here
+   * needs to special-case that). Available in the lobby and mid-game alike,
+   * since there's no reason to gate simple table talk to one or the other.
+   */
+  addChatMessage(code, playerId, text) {
+    const room = this.rooms.get(code);
+    if (!room) throw new Error('Room not found');
+    const seat = room.seats.find((s) => s.id === playerId);
+    if (!seat) throw new Error('Not in this room');
+    const trimmed = (text || '').trim().slice(0, MAX_CHAT_MESSAGE_LENGTH);
+    if (!trimmed) throw new Error('Message is empty');
+
+    const message = { id: crypto.randomUUID(), playerId, name: seat.name, text: trimmed, at: Date.now() };
+    room.chatMessages.push(message);
+    if (room.chatMessages.length > MAX_CHAT_MESSAGES) room.chatMessages.shift();
+    return room;
+  }
+
   startGame(code, requesterId, options = {}) {
     const room = this.rooms.get(code);
     if (!room) throw new Error('Room not found');
@@ -190,6 +213,7 @@ export class RoomManager {
         isBot: !!s.isBot,
         botDifficulty: s.botDifficulty,
       })),
+      chatMessages: room.chatMessages,
     };
   }
 }

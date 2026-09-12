@@ -5,6 +5,7 @@ import { saveSession, loadSession, clearSession } from './session';
 import Lobby from './components/Lobby';
 import WaitingRoom from './components/WaitingRoom';
 import Table from './components/Table';
+import ChatPanel from './components/ChatPanel';
 
 function App() {
   const [connected, setConnected] = useState(socket.connected);
@@ -20,6 +21,23 @@ function App() {
   // state, which lags behind and would otherwise make a real reconnect
   // look like "already joined" and skip re-joining entirely.
   const joinedRef = useRef(false);
+  const [reactions, setReactions] = useState([]);
+  const reactionIdRef = useRef(0);
+
+  useEffect(() => {
+    // Reactions are relayed live, not stored in room state (see server) -
+    // each one is added to a short-lived local list and removed again once
+    // its on-screen animation has had time to finish.
+    function onReaction({ playerId, emoji }) {
+      const id = ++reactionIdRef.current;
+      setReactions((prev) => [...prev, { id, playerId, emoji }]);
+      setTimeout(() => {
+        setReactions((prev) => prev.filter((r) => r.id !== id));
+      }, 2200);
+    }
+    socket.on('reaction', onReaction);
+    return () => socket.off('reaction', onReaction);
+  }, []);
 
   useEffect(() => {
     // A saved session survives page reloads and lets us silently re-attach
@@ -158,6 +176,8 @@ function App() {
   const handleDraw = (source, cardId) => runAction('game:draw', { source, cardId });
   const handleCall = () => runAction('game:call', {});
   const handleRpsChoice = (move) => runAction('game:rpsChoice', { move });
+  const handleSendChat = (text) => runAction('chat:send', { text });
+  const handleSendReaction = (emoji) => call('player:reaction', { emoji }).catch(() => {});
 
   if (!connected) {
     return (
@@ -189,6 +209,7 @@ function App() {
           error={error}
           busy={busy}
         />
+        <ChatPanel messages={state.room.chatMessages || []} playerId={state.yourPlayerId} onSend={handleSendChat} />
       </div>
     );
   }
@@ -205,8 +226,11 @@ function App() {
         onCall={handleCall}
         onNextRound={handleNextRound}
         onRpsChoice={handleRpsChoice}
+        onReact={handleSendReaction}
+        reactions={reactions}
         error={error}
       />
+      <ChatPanel messages={state.room.chatMessages || []} playerId={state.yourPlayerId} onSend={handleSendChat} />
     </div>
   );
 }

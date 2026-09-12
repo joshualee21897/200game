@@ -520,6 +520,7 @@ button.secondary:active {
 }
 
 .score-chip {
+  position: relative;
   background: #fff;
   border: none;
   border-radius: 0.875em;
@@ -529,6 +530,44 @@ button.secondary:active {
   gap: 2px;
   min-width: 6.875em;
   box-shadow: 0 4px 10px rgba(20, 60, 20, 0.15);
+}
+
+/* A quick reaction someone sent pops up right above their own scoreboard
+   chip - clearly tied to who sent it - then fades on its own; removed from
+   the DOM by the same timeout that drives the fade (see App.jsx), so the
+   animation never needs to be told to stop mid-flight. */
+.score-chip-reaction {
+  position: absolute;
+  top: -1.6em;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.6em;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+  animation: score-chip-reaction-pop 2.2s ease-out forwards;
+}
+
+@keyframes score-chip-reaction-pop {
+  0% {
+    transform: translateX(-50%) scale(0.4);
+    opacity: 0;
+  }
+  15% {
+    transform: translateX(-50%) scale(1.25);
+    opacity: 1;
+  }
+  25% {
+    transform: translateX(-50%) scale(1);
+  }
+  75% {
+    transform: translateX(-50%) scale(1) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) scale(1) translateY(-0.6em);
+    opacity: 0;
+  }
 }
 
 .score-chip-active {
@@ -545,6 +584,33 @@ button.secondary:active {
   font-size: 0.8em;
   font-weight: 700;
   color: var(--ink-soft);
+}
+
+.quick-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+}
+
+.quick-reaction-button {
+  background: #fff;
+  border: none;
+  border-radius: 999px;
+  width: 2.4em;
+  height: 2.4em;
+  font-size: 1.15em;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(20, 60, 20, 0.15);
+  transition: transform 0.08s ease;
+}
+
+.quick-reaction-button:hover {
+  transform: translateY(-2px);
+}
+
+.quick-reaction-button:active {
+  transform: translateY(1px);
 }
 
 .piles {
@@ -1551,6 +1617,116 @@ button.secondary:active {
 .mute-fab:hover {
   background: #fff;
   transform: translateY(-2px);
+}
+
+.chat-fab {
+  position: fixed;
+  /* Stacked directly above the mute button rather than sharing its corner. */
+  bottom: 76px;
+  left: 20px;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  font-size: 1.2rem;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(20, 60, 20, 0.3);
+  z-index: 5;
+}
+
+.chat-fab:hover {
+  background: #fff;
+  transform: translateY(-2px);
+}
+
+.chat-unread-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--red);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+}
+
+.chat-message-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+  min-height: 120px;
+  max-height: 50vh;
+}
+
+.chat-message {
+  background: var(--green-light);
+  border-radius: 12px;
+  padding: 8px 12px;
+  max-width: 85%;
+  align-self: flex-start;
+}
+
+.chat-message-you {
+  background: var(--green);
+  align-self: flex-end;
+}
+
+.chat-message-you .chat-message-name,
+.chat-message-you .chat-message-text {
+  color: #fff;
+}
+
+.chat-message-name {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--green-dark);
+  margin-bottom: 2px;
+}
+
+.chat-message-text {
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.chat-input-row input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid var(--green-light);
+  background: #fbfffa;
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+.chat-input-row input:focus {
+  outline: none;
+  border-color: var(--green);
+}
+
+.chat-input-row button {
+  flex-shrink: 0;
 }
 
 .instructions-panel section {
