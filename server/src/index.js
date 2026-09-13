@@ -22,10 +22,6 @@ const BOT_THINK_MS = 3000;
 // paused turn stuck with no timeout ever firing again. This caps it: past
 // this long, the clock resumes on its own regardless of reported state.
 const MAX_TURN_PAUSE_MS = 3 * 60 * 1000;
-// A fixed set rather than free-form input - keeps this a lightweight,
-// can't-be-abused reaction layer.
-const REACTION_EMOJIS = ['👍', '😂', '😮', '😡', '🔥', '🎉', '🤔', '👏'];
-const REACTION_COOLDOWN_MS = 400;
 
 const app = express();
 app.use(cors({ origin: CLIENT_ORIGIN }));
@@ -47,7 +43,6 @@ const turnTimers = new Map(); // roomCode -> Timeout
 const roundAdvanceTimers = new Map(); // roomCode -> Timeout
 const botTimers = new Map(); // roomCode -> Timeout
 const pauseSafetyTimers = new Map(); // roomCode -> Timeout, see MAX_TURN_PAUSE_MS
-const lastReactionAt = new Map(); // playerId -> timestamp, for the reaction-spam cooldown
 const pushSubscriptions = new Map(); // playerId -> PushSubscription, survives disconnects/reconnects
 const lastNotifiedTurnPlayer = new Map(); // roomCode -> playerId, so each turn only sends one push
 
@@ -229,8 +224,7 @@ function broadcastState(room) {
 
 /**
  * Sends a "your turn" push the moment the turn actually changes to a human
- * player - not on every broadcast during that same turn (e.g. a reaction
- * mid-turn shouldn't re-notify). Deliberately fires
+ * player - not on every broadcast during that same turn. Deliberately fires
  * regardless of whether that player's socket is currently connected: being
  * connected-but-backgrounded is exactly one of the situations this is
  * meant to help with, not just a fully closed tab.
@@ -445,25 +439,6 @@ io.on('connection', (socket) => {
     cb?.({ ok: true });
   });
 
-  // Deliberately NOT persisted anywhere - a reaction is a fleeting,
-  // in-the-moment thing, not part of the room's lasting record, so it's
-  // just relayed straight to whoever's connected right now.
-  socket.on('player:reaction', ({ emoji } = {}, cb) => {
-    try {
-      const room = roomManager.getRoom(socket.data.roomCode);
-      if (!room) throw new Error('Not in a room');
-      if (!REACTION_EMOJIS.includes(emoji)) throw new Error('Invalid reaction');
-      const playerId = socket.data.playerId;
-      const now = Date.now();
-      if (now - (lastReactionAt.get(playerId) || 0) < REACTION_COOLDOWN_MS) throw new Error('Slow down');
-      lastReactionAt.set(playerId, now);
-      cb?.({ ok: true });
-      forEachSocketInRoom(room.code, (s) => s.emit('reaction', { playerId, emoji }));
-    } catch (err) {
-      cb?.({ ok: false, error: err.message });
-    }
-  });
-
   // Lets a client report its own tab/window going into or out of the
   // background, without that meaning the connection dropped - a
   // backgrounded mobile browser (e.g. an in-app browser like Telegram's)
@@ -480,7 +455,6 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     const { roomCode, playerId } = socket.data;
-    lastReactionAt.delete(playerId);
     if (!roomCode || !playerId) return;
     roomManager.markDisconnected(roomCode, playerId, () => {
       const room = roomManager.getRoom(roomCode);

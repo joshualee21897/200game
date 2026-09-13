@@ -560,7 +560,6 @@ button.secondary:active {
 }
 
 .score-chip {
-  position: relative;
   background: #fff;
   border: none;
   border-radius: 0.875em;
@@ -570,44 +569,6 @@ button.secondary:active {
   gap: 2px;
   min-width: 6.875em;
   box-shadow: 0 4px 10px rgba(20, 60, 20, 0.15);
-}
-
-/* A quick reaction someone sent pops up right above their own scoreboard
-   chip - clearly tied to who sent it - then fades on its own; removed from
-   the DOM by the same timeout that drives the fade (see App.jsx), so the
-   animation never needs to be told to stop mid-flight. */
-.score-chip-reaction {
-  position: absolute;
-  top: -1.6em;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 1.6em;
-  line-height: 1;
-  pointer-events: none;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
-  animation: score-chip-reaction-pop 2.2s ease-out forwards;
-}
-
-@keyframes score-chip-reaction-pop {
-  0% {
-    transform: translateX(-50%) scale(0.4);
-    opacity: 0;
-  }
-  15% {
-    transform: translateX(-50%) scale(1.25);
-    opacity: 1;
-  }
-  25% {
-    transform: translateX(-50%) scale(1);
-  }
-  75% {
-    transform: translateX(-50%) scale(1) translateY(0);
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(-50%) scale(1) translateY(-0.6em);
-    opacity: 0;
-  }
 }
 
 .score-chip-active {
@@ -624,33 +585,6 @@ button.secondary:active {
   font-size: 0.8em;
   font-weight: 700;
   color: var(--ink-soft);
-}
-
-.quick-reactions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4em;
-}
-
-.quick-reaction-button {
-  background: #fff;
-  border: none;
-  border-radius: 999px;
-  width: 2.4em;
-  height: 2.4em;
-  font-size: 1.15em;
-  line-height: 1;
-  cursor: pointer;
-  box-shadow: 0 3px 8px rgba(20, 60, 20, 0.15);
-  transition: transform 0.08s ease;
-}
-
-.quick-reaction-button:hover {
-  transform: translateY(-2px);
-}
-
-.quick-reaction-button:active {
-  transform: translateY(1px);
 }
 
 .piles {

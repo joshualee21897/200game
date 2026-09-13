@@ -21,8 +21,6 @@ function App() {
   // state, which lags behind and would otherwise make a real reconnect
   // look like "already joined" and skip re-joining entirely.
   const joinedRef = useRef(false);
-  const [reactions, setReactions] = useState([]);
-  const reactionIdRef = useRef(0);
   // Once we've shown a room at all, a later disconnect is a mid-session
   // blip, not a fresh load - the UI should keep showing the last known
   // board with a small "reconnecting" note instead of wiping the whole
@@ -31,21 +29,6 @@ function App() {
   // every time, even though socket.io was about to auto-reconnect anyway.
   const hadRoomRef = useRef(false);
   const [rejoinFailed, setRejoinFailed] = useState(false);
-
-  useEffect(() => {
-    // Reactions are relayed live, not stored in room state (see server) -
-    // each one is added to a short-lived local list and removed again once
-    // its on-screen animation has had time to finish.
-    function onReaction({ playerId, emoji }) {
-      const id = ++reactionIdRef.current;
-      setReactions((prev) => [...prev, { id, playerId, emoji }]);
-      setTimeout(() => {
-        setReactions((prev) => prev.filter((r) => r.id !== id));
-      }, 2200);
-    }
-    socket.on('reaction', onReaction);
-    return () => socket.off('reaction', onReaction);
-  }, []);
 
   useEffect(() => {
     // A saved session survives page reloads and lets us silently re-attach
@@ -212,7 +195,6 @@ function App() {
   const handleDraw = (source, cardId) => runAction('game:draw', { source, cardId });
   const handleCall = () => runAction('game:call', {});
   const handleRpsChoice = (move) => runAction('game:rpsChoice', { move });
-  const handleSendReaction = (emoji) => call('player:reaction', { emoji }).catch(() => {});
 
   // Only the very first load (never having seen a room yet) shows the
   // full blank "Connecting..." screen. Once a room's been shown at least
@@ -290,9 +272,7 @@ function App() {
         onCall={handleCall}
         onNextRound={handleNextRound}
         onRpsChoice={handleRpsChoice}
-        onReact={handleSendReaction}
         onNextGame={handleStartNextGame}
-        reactions={reactions}
         error={error}
       />
       <NotificationToggle playerId={state.yourPlayerId} />
